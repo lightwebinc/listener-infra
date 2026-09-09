@@ -95,9 +95,11 @@ table inet shard-listener {
 {% endif %}
 
 {% if enable_bgp | bool %}
-        # BGP control plane
+        # BGP control plane. Destination port only: an outbound-initiated
+        # session's return traffic is already covered by the ct established
+        # rule above, while a blanket `sport 179 accept` would expose every
+        # destination port to a spoofed source port.
         tcp dport 179 accept
-        tcp sport 179 accept
 {% endif %}
 
         counter drop

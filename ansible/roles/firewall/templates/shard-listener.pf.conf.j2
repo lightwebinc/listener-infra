@@ -43,8 +43,12 @@ pass quick on lo0 all
 block in  quick on $fabric_if inet
 block out quick on $fabric_if inet
 
-# Keep state for established connections
-pass quick proto tcp flags S/SA keep state
+# NOTE: there is deliberately NO catch-all TCP pass here. A blanket
+# "pass quick proto tcp flags S/SA keep state" matches every TCP SYN in both
+# directions, and because it is `quick` it short-circuits every rule below it —
+# opening all bound ports (SSH, metrics, anything else) to the world and turning
+# the mgmt-CIDR rules further down into dead code. Inbound TCP is admitted only
+# by the explicit mgmt rule; outbound TCP by the explicit egress/DNS/HTTP rules.
 
 # ICMPv6 / MLD on fabric; ICMPv4 only on non-fabric
 pass quick inet6 proto icmp6
@@ -83,8 +87,11 @@ pass out quick on ! $fabric_if proto {{ egress_proto }} to $egress_host port $eg
 
 {% if enable_bgp | bool %}
 # --- BGP control plane ---
+# Destination-port only, and `keep state` carries the reply leg in both
+# directions of session establishment. A blanket `from any port 179` additionally
+# exposed EVERY destination port to anyone willing to source from 179, which is
+# trivially spoofable for a stateless first packet.
 pass quick proto tcp from any to any port 179 keep state
-pass quick proto tcp from any port 179 to any keep state
 {% endif %}
 
 # --- Basic outbound: DNS / NTP / HTTP(S) on non-fabric ---
