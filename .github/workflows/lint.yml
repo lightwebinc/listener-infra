@@ -48,8 +48,8 @@ jobs:
       - name: Run ansible-lint
         run: ansible-lint ansible/
 
-  nftables-syntax:
-    name: nftables syntax check
+  firewall-policy:
+    name: firewall syntax + policy (nft & pf)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -91,8 +91,32 @@ jobs:
           EOF
           ansible-playbook /tmp/nft-check/render.yml
 
-      - name: Validate rendered ruleset
+      - name: Render the pf twin with the same fixture
+        run: |
+          cat > /tmp/nft-check/render-pf.yml <<EOF
+          - hosts: localhost
+            gather_facts: false
+            connection: local
+            vars_files:
+              - /tmp/nft-check/vars.yml
+            tasks:
+              - template:
+                  src: ${GITHUB_WORKSPACE}/ansible/roles/firewall/templates/shard-listener.pf.conf.j2
+                  dest: /tmp/nft-check/rendered.pf
+          EOF
+          ansible-playbook /tmp/nft-check/render-pf.yml
+
+      - name: Validate rendered nft ruleset (syntax)
         run: sudo nft -c -f /tmp/nft-check/rendered.nft
+
+      # Syntax is not safety. Both backends are checked against the same
+      # perimeter invariants, because every perimeter defect this repo has
+      # shipped passed a green syntax check: a blanket TCP accept and a
+      # spoofable `sport 179` both parsed perfectly.
+      - name: Assert perimeter policy (both backends)
+        run: |
+          python3 ci/firewall-policy-check.py --backend nft /tmp/nft-check/rendered.nft
+          python3 ci/firewall-policy-check.py --backend pf  /tmp/nft-check/rendered.pf
 
   trivy:
     name: trivy config
