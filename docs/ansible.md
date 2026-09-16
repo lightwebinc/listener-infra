@@ -33,7 +33,7 @@ ansible-playbook -i inventory/hosts.yml site.yml
 
 `site.yml` runs roles in this order:
 
-1. `common` — install packages, Go toolchain
+1. `common` — install packages, Go toolchain, journald cap + disk-reclaim timer (Linux); opt-in `--tags os_update` patching
 2. `perf-tuning` — high-PPS host tuning (UDP buffers, busy-poll, C-states)
 3. `shard-listener` — build binary, install service
 4. `networking` — configure `ingress_iface`, GRE, BGP VIP
@@ -58,6 +58,7 @@ See `ansible/group_vars/all.yml` for the full list. Quick reference:
 | `egress_addr`              | `127.0.0.1:9100` | Downstream consumer                                    |
 | `egress_proto`             | `udp`            | Or `tcp`                                               |
 | `retry_endpoints`          | `""`             | `"host:port,host:port"`                                |
+| `retry_tee_listen`         | unset            | Optional `RETRY_TEE` (listener ≥ v1.24.1): mirror received frames to a co-resident retry-endpoint `-tee-listen`; rendered only when set (not declared in `group_vars/all.yml`) |
 | `num_workers`              | `1`              | Already `1` in `group_vars/all.yml`; raise only for `listener_mode: delivery` (see note) |
 | `metrics_addr`             | `:9200`          |                                                        |
 | `otlp_endpoint`            | `""`             |                                                        |
@@ -94,6 +95,30 @@ the following must be set on each host (not in group vars):
 > doubling (or more) all metrics and egress traffic. `group_vars/all.yml` already
 > defaults to `1`; raise it only on a host running `listener_mode: delivery`,
 > where ingest is unicast and SO_REUSEPORT does load-balance.
+
+## common role
+
+Besides packages and the Go toolchain, `common` keeps the root filesystem
+bounded on Linux hosts (journald `SystemMaxUse` drop-in plus a
+`node-disk-maintenance.timer` that reclaims the apt cache and stale Go build
+caches) and carries the opt-in patch path: `ansible-playbook site.yml --tags
+os_update` dist-upgrades Debian-family hosts (rebooting when
+`/var/run/reboot-required` appears) and runs `freebsd-update` + `pkg upgrade`
+on FreeBSD (pending reboots are reported, never performed). Knobs live in
+`roles/common/defaults/main.yml`:
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `common_disk_maintenance` | `true` | Install the reclaim timer; `false` removes it |
+| `common_disk_maintenance_oncalendar` | `daily` | systemd `OnCalendar` for the timer |
+| `common_disk_maintenance_splay_sec` | `3600` | `RandomizedDelaySec` so nodes do not fire in lockstep |
+| `common_gocache_max_age_days` | `7` | Go build caches touched within this window are kept |
+| `common_journal_max_use` | `300M` | journald `SystemMaxUse` |
+| `common_journal_keep_free` | `1G` | journald `SystemKeepFree` |
+| `common_journal_max_retention` | `2week` | journald `MaxRetentionSec` |
+
+The reclaim script drops a node_exporter textfile under
+`node_exporter_textfile_dir` (default `/var/lib/node_exporter/textfile_collector`).
 
 ## Common operations
 

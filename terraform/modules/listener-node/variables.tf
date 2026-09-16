@@ -267,7 +267,7 @@ variable "retry_endpoints" {
 }
 
 variable "shard_bits" {
-  description = "Shard bit width (1-24); must match proxy"
+  description = "Shard bit width (0-12 per BRC-129); must match proxy"
   type        = number
   default     = 2
 }
