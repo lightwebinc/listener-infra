@@ -175,7 +175,10 @@ variable "listener_repo" {
 variable "listener_version" {
   description = "Git ref (branch, tag, or SHA) to check out"
   type        = string
-  default     = "main"
+  # Keep in step with `listener_version` in ansible/group_vars/all.yml. The module
+  # passes this as --extra-vars, which outranks group_vars, so "main" here floats
+  # a Terraform-driven deploy off the pin the repo ships.
+  default = "v1.26.0"
 }
 
 variable "mc_group_id" {

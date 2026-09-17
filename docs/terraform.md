@@ -17,6 +17,15 @@ Inputs include the full listener configuration (listen port, shard bits,
 egress target, NACK tuning, metrics, OTLP interval, firewall mgmt CIDRs,
 BGP).
 
+#### Version pin coupling
+
+Inputs are passed as `--extra-vars`, which **outrank**
+`ansible/group_vars/all.yml`. `listener_version` is therefore pinned twice: the
+`variables.tf` default must equal the `listener_version` in `group_vars/all.yml`
+(`v1.26.0` today). Move both in the same change — a lagging default (or `main`)
+silently deploys a different build from Terraform than a plain `ansible-playbook`
+run does, with nothing in the output saying so.
+
 ### `modules/bgp`
 
 Pure variable-aggregation helper that produces a `bgp_vars` map for feeding

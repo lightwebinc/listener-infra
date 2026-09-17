@@ -29,3 +29,11 @@ common_gocache_max_age_days: 7
 common_journal_max_use: "300M"
 common_journal_keep_free: "1G"
 common_journal_max_retention: "2week"
+
+# Where the reclaim script (and disk_hygiene.yml) drops its node_exporter
+# textfile metric. Declared here rather than left to the inline
+# `| default(...)` in tasks/templates: an operator moving node_exporter's
+# --collector.textfile.directory has to find one name, and an undeclared
+# variable is invisible to `ansible-inventory --list` and to this role's docs.
+# Keep in step with the node_exporter collector path on the node.
+node_exporter_textfile_dir: "/var/lib/node_exporter/textfile_collector"
