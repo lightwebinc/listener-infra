@@ -1,7 +1,7 @@
 ---
 # Keeps the root filesystem bounded WITHOUT depending on a converge running.
-# See roles/common/defaults/main.yml for what fills these nodes and how the
-# 2026-08-11 fabric-wide NodeDiskLow happened.
+# See roles/common/defaults/main.yml for what fills these nodes and how a
+# fleet-wide disk-low alert became possible.
 #
 # Two layers, deliberately overlapping:
 #   1. a declarative ceiling, so the journal cannot grow past it in the first place;
@@ -24,10 +24,10 @@
         dest: /etc/systemd/journald.conf.d/10-size-cap.conf
         mode: "0644"
         content: |
-          # Managed by Ansible (integrated-infra common) — do not edit.
+          # Managed by Ansible (common role). Do not edit.
           # Upstream leaves SystemMaxUse unset, i.e. 10% of the filesystem. These
           # nodes cannot spend that, and a cap that scales with the disk is not a
-          # cap — every fabric node had in fact grown a ~900M journal.
+          # cap: journals approaching a gigabyte have been observed here.
           [Journal]
           SystemMaxUse={{ common_journal_max_use }}
           SystemKeepFree={{ common_journal_keep_free }}

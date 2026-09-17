@@ -10,11 +10,12 @@
 #   - /tmp/gopath + /tmp/gocache, ~780M left behind by the on-node Go builds in the
 #     shard-proxy / shard-listener / retry-endpoint roles.
 #
-# On 2026-08-11 a single fleet-wide converge took all 8 fabric nodes from 2.8G free
-# to 1.4G and tripped NodeDiskLow across the fabric at once. The converge-time fixes
-# (apt clean in os_update.yml, the Clean Go build caches handler) only run when a
-# converge runs, which is exactly the assumption that failed — so the same reclaims
-# also run on a timer, independent of anyone deploying anything.
+# A single fleet-wide converge has been observed to halve the free space on every
+# node it touched and trip the disk-low alert on all of them at once. The
+# converge-time fixes (apt clean in os_update.yml, the Clean Go build caches
+# handler) only run when a converge runs, which is exactly the assumption that
+# failed, so the same reclaims also run on a timer, independent of anyone
+# deploying anything.
 common_disk_maintenance: true
 common_disk_maintenance_oncalendar: "daily"
 # Spread across nodes so a fabric's worth of timers does not fire in lockstep; the
