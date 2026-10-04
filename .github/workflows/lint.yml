@@ -10,54 +10,28 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  yamllint:
-    name: yamllint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
+  ansible:
+    uses: lightwebinc/ci/.github/workflows/ansible-lint.yml@bfcf31c675b8206453c90497534a72886933f0a9 # main
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install yamllint
-        run: pip install yamllint
-
-      - name: Run yamllint
-        run: yamllint ansible/
-
-  ansible-lint:
-    name: ansible-lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install ansible-lint
-        run: pip install ansible-lint>=25.0
-
-      - name: Install Ansible collections
-        run: |
-          ansible-galaxy collection install 'community.general>=10.0' 'ansible.posix>=2.0'
-
-      - name: Run ansible-lint
-        run: ansible-lint ansible/
+  terraform:
+    uses: lightwebinc/ci/.github/workflows/terraform.yml@bfcf31c675b8206453c90497534a72886933f0a9 # main
+    with:
+      dirs: '["terraform/modules/listener-node", "terraform/modules/bgp", "terraform/examples/generic", "terraform/examples/aws-ec2"]'
+      trivyignores: terraform/examples/aws-ec2/.trivyignore
 
   firewall-policy:
     name: firewall syntax + policy (nft & pf)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install nftables + ansible
         run: |
@@ -122,48 +96,3 @@ jobs:
         run: |
           python3 ci/firewall-policy-check.py --backend nft /tmp/nft-check/rendered.nft
           python3 ci/firewall-policy-check.py --backend pf  /tmp/nft-check/rendered.pf
-
-  trivy:
-    name: trivy config
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: trivy config scan
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          scan-type: config
-          scan-ref: terraform/
-          exit-code: "1"
-          severity: HIGH,CRITICAL
-          trivyignores: terraform/examples/aws-ec2/.trivyignore
-
-  terraform-validate:
-    name: terraform validate
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        dir:
-          - terraform/modules/listener-node
-          - terraform/modules/bgp
-          - terraform/examples/generic
-          - terraform/examples/aws-ec2
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: "1.9"
-
-      - name: terraform init
-        run: terraform init -backend=false
-        working-directory: ${{ matrix.dir }}
-
-      - name: terraform validate
-        run: terraform validate
-        working-directory: ${{ matrix.dir }}
-
-      - name: terraform fmt check
-        run: terraform fmt -check -recursive
-        working-directory: ${{ matrix.dir }}
