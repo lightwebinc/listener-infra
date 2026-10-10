@@ -24,7 +24,7 @@ listener_force_build: false
 # Go toolchain version (used when building from source)
 # Must be >= the `go` directive in shard-listener's go.mod at listener_version
 # (v1.29.1 requires 1.26.2); the service builds with golang:1.27 in its own CI.
-go_version: "1.27.1"
+go_version: "1.27.2"
 go_install_dir: "/usr/local/go"
 
 # ------------------------------------------------------------
