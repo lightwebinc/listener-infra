@@ -1,82 +1,32 @@
 # Terraform usage
 
-Terraform orchestrates cloud infrastructure and hands off per-host provisioning
-to the Ansible playbook in `ansible/`.
+Module and example structure, requirements, the Ansible hand-off, running the
+`generic` and `aws-ec2` examples and adding a cloud are documented once in
+[Terraform layout](https://github.com/lightwebinc/bsv-multicast/blob/main/docs/infra/terraform-layout.md). This page covers what is specific
+to listener-infra.
 
 ## Modules
 
-### `modules/listener-node`
+- `modules/listener-node`: one listener host. Inputs cover the full listener
+  configuration (listen port, shard bits, egress target, NACK tuning, metrics,
+  OTLP interval, firewall mgmt CIDRs, BGP).
+- `modules/bgp`: variable-aggregation helper producing a `bgp_vars` map for
+  `listener-node.extra_ansible_vars`; creates no resources.
 
-Provisions a single listener host:
+`listener_version` in `modules/listener-node/variables.tf` must equal
+`listener_version` in `ansible/group_vars/all.yml`, the single source of truth;
+move both in one change
+([version pin coupling](https://github.com/lightwebinc/bsv-multicast/blob/main/docs/infra/terraform-layout.md#version-pin-coupling)).
 
-1. Renders a per-host Ansible inventory (`generated-inventory-*.yml`).
-2. Runs `ansible-playbook site.yml` via `local-exec`, passing all listener
-   variables as `--extra-vars`.
+## Cloud firewall
 
-Inputs include the full listener configuration (listen port, shard bits,
-egress target, NACK tuning, metrics, OTLP interval, firewall mgmt CIDRs,
-BGP).
+The AWS example's security group is the cloud-level perimeter; the on-host
+nftables ruleset from the `firewall` role is the fine-grained one (see
+[security.md](security.md)). A cloud firewall for listeners must permit:
 
-#### Version pin coupling
-
-Inputs are passed as `--extra-vars`, which **outrank**
-`ansible/group_vars/all.yml`. `listener_version` is therefore pinned twice: the
-`variables.tf` default must equal the `listener_version` in `group_vars/all.yml`
-(the single source of truth for the current release). Move both in the same change — a lagging default (or `main`)
-silently deploys a different build from Terraform than a plain `ansible-playbook`
-run does, with nothing in the output saying so.
-
-### `modules/bgp`
-
-Pure variable-aggregation helper that produces a `bgp_vars` map for feeding
-into `listener-node.extra_ansible_vars`. No resources created.
-
-## Examples
-
-### `examples/generic/`
-
-Cloud-agnostic. Accepts a list of existing hosts and provisions each via
-Ansible. Use this when you already have VMs (e.g. bare metal, a lab, or
-another IaC tool created them).
-
-```sh
-cd terraform/examples/generic
-cp terraform.tfvars.example terraform.tfvars
-$EDITOR terraform.tfvars
-terraform init
-terraform apply
-```
-
-### `examples/aws-ec2/`
-
-Provisions VPC, subnets, SGs, EC2 instances (Ubuntu 24.04), optional EIPs,
-then runs Ansible.
-
-```sh
-cd terraform/examples/aws-ec2
-cp terraform.tfvars.example terraform.tfvars
-$EDITOR terraform.tfvars
-terraform init
-terraform apply
-```
-
-The AWS example creates a Security Group that is the cloud-level perimeter.
-The on-host nftables ruleset (deployed by the `firewall` Ansible role) is
-the fine-grained perimeter. Both must stay aligned — see
-[`security.md`](security.md).
-
-## Extending to other clouds
-
-Copy `examples/generic/` or `examples/aws-ec2/` and adapt:
-
-1. Create VMs / VPC / security groups.
-2. Collect the resulting host IPs into `local.node_ips` (or equivalent).
-3. Pass them to `module.listener_nodes` (one instance per host).
-4. Ensure cloud-level firewall permits:
-   - UDP/`listen_port` from fabric sources
-   - TCP/22 and TCP/9200 from `mgmt_cidrs_*`
-   - TCP/179 when `enable_bgp` is true
-   - Outbound per your organisation's policy
+- UDP/`listen_port` from fabric sources
+- TCP/22 and TCP/9200 from `mgmt_cidrs_*`
+- TCP/179 when `enable_bgp` is true
 
 ## Defaults worth double-checking
 

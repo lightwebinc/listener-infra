@@ -1,6 +1,11 @@
 # Ubuntu 24.04 (Noble)
 
-## Service management
+Packages, systemd and netplan conventions, BGP daemon paths and generic
+diagnostics shared by all infra repositories are in the canonical
+[Ubuntu 24.04 notes](https://github.com/lightwebinc/bsv-multicast/blob/main/docs/infra/os/ubuntu-24.04.md). This page lists what is specific to
+`shard-listener`.
+
+## Service
 
 ```sh
 systemctl status shard-listener
@@ -12,71 +17,24 @@ systemctl status bsl-bgp-check.timer
 journalctl -u bsl-bgp-check.service --since -5min
 ```
 
-Unit file: `/etc/systemd/system/shard-listener.service`
-(see template `ansible/roles/shard-listener/templates/shard-listener.service.j2`).
+## File locations
 
-Environment file: `/etc/shard-listener/config.env`.
+| Path | Content |
+|---|---|
+| `/etc/systemd/system/shard-listener.service` | systemd unit (template `shard-listener.service.j2`) |
+| `/etc/shard-listener/config.env` | Environment config |
+| `/etc/netplan/60-shard-listener.yaml` | Ingress ethernet |
+| `/etc/netplan/61-shard-listener-gre.yaml` | GRE6 tunnel (`ingress_mode: gre`) |
+| `/etc/netplan/62-shard-listener-vip.yaml` | BGP VIP on loopback |
+| `/etc/sysctl.d/60-shard-listener.conf` | Sysctls |
+| `/etc/nftables.d/60-shard-listener.nft` | Firewall ruleset (`nft list table inet shard-listener`) |
 
-## Network configuration
-
-Netplan:
-
-- `/etc/netplan/60-shard-listener.yaml` — ingress ethernet
-- `/etc/netplan/61-shard-listener-gre.yaml` — GRE6 tunnel (when
-  `ingress_mode: gre`)
-- `/etc/netplan/62-shard-listener-vip.yaml` — BGP VIP on loopback
-
-Apply:
+## Diagnostics
 
 ```sh
-netplan apply
-```
-
-Sysctl: `/etc/sysctl.d/60-shard-listener.conf`.
-
-## Firewall
-
-nftables ruleset: `/etc/nftables.d/60-shard-listener.nft` (included from
-`/etc/nftables.conf`).
-
-```sh
-nft list table inet shard-listener
-systemctl status nftables
-```
-
-## Package installation
-
-The `common` role installs:
-
-- `acl`, `build-essential`, `git`, `curl`, `ca-certificates`, `tar`
-- `nftables` (when `enable_firewall: true`)
-- `bird2` **or** `frr` (when `enable_bgp: true`)
-
-The Go toolchain is installed to `/usr/local/go` (version configured via
-`go_version`).
-
-## BGP daemon paths
-
-| Daemon | Config                       | Reload                            |
-|--------|------------------------------|-----------------------------------|
-| BIRD2  | `/etc/bird/bird.conf`        | `systemctl reload bird` / `birdc configure` |
-| FRR    | `/etc/frr/frr.conf`          | `systemctl reload frr`            |
-
-## Multicast diagnostics
-
-```sh
-# Joined groups
-ip -6 maddr show dev eth0
-
-# Live receive capture
-tcpdump -i eth0 -nn 'udp and ip6 multicast and port 9001'
-
-# Sysctl state
-sysctl net.ipv6.conf.eth0.accept_ra
+tcpdump -i eth0 -nn 'udp and ip6 multicast and port 9001'   # data receive
 ```
 
 ## Known issues
 
-- **`ingress_iface` precedence.** Must be set per-host, not on group_vars.
-- **LXD `acl` missing.** Installed by `common` role.
-- **`git` "dubious ownership".** Handled by setting `safe.directory`.
+- **`ingress_iface` precedence.** Set it per host, not in group vars.

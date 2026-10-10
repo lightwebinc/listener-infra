@@ -1,90 +1,37 @@
 # FreeBSD 14
 
-## Service management
+Packages, rc.d and rc.conf conventions, pf usage, `gif0` tunnels, BGP daemon
+paths and generic diagnostics shared by all infra repositories are in the
+canonical [FreeBSD 14 notes](https://github.com/lightwebinc/bsv-multicast/blob/main/docs/infra/os/freebsd-14.md). This page lists what is
+specific to `shard-listener`.
+
+## Service
 
 ```sh
+sysrc shard_listener_enable=YES
 service shard_listener status
 service shard_listener restart
 tail -f /var/log/shard_listener.log
 ```
 
-rc.d script: `/usr/local/etc/rc.d/shard_listener`
-(see template `ansible/roles/shard-listener/templates/shard_listener.rc.j2`).
+## File locations
 
-Environment file: `/usr/local/etc/shard-listener.conf`.
+| Path | Content |
+|---|---|
+| `/usr/local/etc/rc.d/shard_listener` | rc.d script (template `shard_listener.rc.j2`) |
+| `/usr/local/etc/shard-listener.conf` | Environment config |
+| `/etc/pf.anchors/shard-listener` | pf anchor (`pfctl -a shard-listener -sr`) |
+| `/usr/local/bin/bsl-bgp-check.sh` | BGP health check, run from cron every minute |
 
-Enable at boot:
+`/etc/rc.conf` also carries `ipv6_route_bsl_mcast` (multicast route on the
+ingress interface) and the `ifconfig_lo0_alias*` BGP VIPs.
 
-```sh
-sysrc shard_listener_enable=YES
-```
-
-## Network configuration
-
-`/etc/rc.conf` entries managed by the `networking` role:
-
-- `ifconfig_<iface>`, `ifconfig_<iface>_ipv6` (ethernet ingress)
-- `cloned_interfaces="gif0"` + `ifconfig_gif0*` (GRE mode)
-- `ifconfig_lo0_alias0` / `alias1` (BGP VIP)
-- `ipv6_route_bsl_mcast` (multicast route on ingress iface)
-
-Apply:
+## Diagnostics
 
 ```sh
-service netif restart
-service routing restart
-```
-
-## Firewall (pf)
-
-Anchor file: `/etc/pf.anchors/shard-listener`, loaded from `/etc/pf.conf`
-via a managed anchor block.
-
-```sh
-pfctl -sr
-pfctl -a shard-listener -sr
-pfctl -f /etc/pf.conf
-```
-
-Enable:
-
-```sh
-sysrc pf_enable=YES pflog_enable=YES
-service pf start
-```
-
-## Packages
-
-The `common` role installs via `pkg`:
-
-- `gmake`, `git`, `curl`, `ca_root_nss`, `bash`, `tar`
-- `bird2` or `frr` (when `enable_bgp: true`)
-
-Go toolchain: `/usr/local/go` (via tarball download).
-
-## BGP daemon paths
-
-| Daemon | Config                                | Reload                     |
-|--------|---------------------------------------|----------------------------|
-| BIRD2  | `/usr/local/etc/bird/bird.conf`       | `service bird reload`      |
-| FRR    | `/usr/local/etc/frr/frr.conf`         | `service frr reload`       |
-
-Health check runs via cron (every minute):
-`/usr/local/bin/bsl-bgp-check.sh`.
-
-## Multicast diagnostics
-
-```sh
-# Joined groups
-netstat -g -f inet6
-
-# Live capture
 tcpdump -i vtnet0 -nn 'udp and ip6 multicast and port 9001'
 ```
 
 ## Known issues
 
-- **Interface naming.** FreeBSD uses `vtnet0` / `em0` — set `ingress_iface`
-  per-host accordingly.
-- **`gif` interface name** is hard-coded in the rc.conf template to `gif0`.
-  If multiple tunnels are needed, adapt the template.
+- Set `ingress_iface` per host to the FreeBSD name (`vtnet0`, `em0`, ...).
