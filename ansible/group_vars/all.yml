@@ -11,7 +11,7 @@ listener_repo: "https://github.com/lightwebinc/shard-listener.git"
 # Pin to a release tag; "main" floats and makes a rebuild non-reproducible.
 # Keep terraform/modules/listener-node/variables.tf `listener_version` in step:
 # the module passes it as --extra-vars, which outranks this file.
-listener_version: "v1.26.0"
+listener_version: "v1.29.1"
 listener_install_dir: "/opt/shard-listener"
 listener_bin_dir: "/usr/local/bin"
 listener_user: "shard-listener"
@@ -19,7 +19,7 @@ listener_group: "shard-listener"
 
 # Go toolchain version (used when building from source)
 # Must be >= the `go` directive in shard-listener's go.mod at listener_version
-# (v1.26.0 requires 1.26.2); the service builds with golang:1.27 in its own CI.
+# (v1.29.1 requires 1.26.2); the service builds with golang:1.27 in its own CI.
 go_version: "1.27.1"
 go_install_dir: "/usr/local/go"
 

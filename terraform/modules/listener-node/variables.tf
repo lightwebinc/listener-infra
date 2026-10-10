@@ -178,7 +178,7 @@ variable "listener_version" {
   # Keep in step with `listener_version` in ansible/group_vars/all.yml. The module
   # passes this as --extra-vars, which outranks group_vars, so "main" here floats
   # a Terraform-driven deploy off the pin the repo ships.
-  default = "v1.26.0"
+  default = "v1.29.1"
 }
 
 variable "mc_group_id" {
