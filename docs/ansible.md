@@ -58,7 +58,7 @@ See `ansible/group_vars/all.yml` for the full list. Quick reference:
 | `egress_addr`              | `127.0.0.1:9100` | Downstream consumer                                    |
 | `egress_proto`             | `udp`            | Or `tcp`                                               |
 | `retry_endpoints`          | `""`             | `"host:port,host:port"`                                |
-| `retry_tee_listen`         | unset            | Optional `RETRY_TEE` (listener ≥ v1.24.1): mirror received frames to a co-resident retry-endpoint `-tee-listen`; rendered only when set (not declared in `group_vars/all.yml`) |
+| `retry_tee_listen`         | `""`             | Optional `RETRY_TEE`: mirror received frames to a co-resident retry-endpoint `-tee-listen`; rendered only when set |
 | `num_workers`              | `1`              | Already `1` in `group_vars/all.yml`; raise only for `listener_mode: delivery` (see note) |
 | `metrics_addr`             | `:9200`          |                                                        |
 | `otlp_endpoint`            | `""`             |                                                        |

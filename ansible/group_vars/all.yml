@@ -16,6 +16,10 @@ listener_install_dir: "/opt/shard-listener"
 listener_bin_dir: "/usr/local/bin"
 listener_user: "shard-listener"
 listener_group: "shard-listener"
+# Push a locally pre-built binary instead of clone+build (empty = build on host).
+listener_local_binary: ""
+# Force a rebuild even when a binary already exists in listener_install_dir.
+listener_force_build: false
 
 # Go toolchain version (used when building from source)
 # Must be >= the `go` directive in shard-listener's go.mod at listener_version
@@ -91,6 +95,23 @@ nack_jitter_max: "200ms"
 nack_backoff_max: "5s"
 nack_max_retries: 8             # Budget for 3 beacon + 3 static-seed entries with headroom
 nack_gap_ttl: "10m"
+# Optional NACK tuning (rendered only when changed from the binary default)
+nack_backoff_base: "500ms"      # NACK_BACKOFF_BASE: base retry delay, doubles per failed round
+nack_max_flows: 100000          # NACK_MAX_FLOWS: tracked per-source flow cap (0 = unbounded)
+nack_max_forward_jump: 4096     # NACK_MAX_FORWARD_JUMP: SeqNum jump that re-baselines a flow
+nack_tail_probe: true           # NACK_TAIL_PROBE: probe the next SeqNum on a quiet flow
+nack_tail_probe_idle_factor: 4.0   # NACK_TAIL_PROBE_IDLE_FACTOR
+nack_tail_probe_min_idle: "500ms"  # NACK_TAIL_PROBE_MIN_IDLE
+nack_tail_probe_max_misses: 3   # NACK_TAIL_PROBE_MAX_MISSES
+# Receive-side retry tee (RETRY_TEE): co-resident retry endpoint's -tee-listen,
+# e.g. "[::1]:9002". Empty = off.
+retry_tee_listen: ""
+# BRC-132 subtree data reception (joins the 0xFFFB announce group).
+subtree_data_enabled: false
+# BRC-139 manifest consumer (MANIFEST_CONSUMER_ENABLED) and additive auto-join
+# from manifests (SHARD_INCLUDE_FROM_MANIFEST; needs the consumer).
+manifest_consumer_enabled: false
+shard_include_from_manifest: false
 
 # Runtime / observability
 # MUST be 1 for any listener that JOINS multicast (collapsed/receiver mode).

@@ -22,7 +22,7 @@ BGP).
 Inputs are passed as `--extra-vars`, which **outrank**
 `ansible/group_vars/all.yml`. `listener_version` is therefore pinned twice: the
 `variables.tf` default must equal the `listener_version` in `group_vars/all.yml`
-(`v1.29.1` today). Move both in the same change — a lagging default (or `main`)
+(the single source of truth for the current release). Move both in the same change — a lagging default (or `main`)
 silently deploys a different build from Terraform than a plain `ansible-playbook`
 run does, with nothing in the output saying so.
 
