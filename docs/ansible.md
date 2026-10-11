@@ -112,7 +112,7 @@ Every variable in `group_vars/all.yml`, with its default.
 | `mc_group_id` | `0x000B` | IANA group-id (default 0x000B = IANA Bitcoin) |
 | `listener_mode` | `collapsed` | Or `receiver` / `delivery` (P3b role split) |
 | `delivery_addrs` | `""` | receiver mode: comma-separated delivery host:port fan-out (empty = egress_addr) |
-| `source_mode` | `asm` | Or `ssm` (needs MLDv2 sysctls + `ssm_bootstrap_*`) |
+| `source_mode` | `ssm` | Default. Needs MLDv2 sysctls + `ssm_bootstrap_*`; `asm` is the lab fallback |
 | `ssm_bootstrap_beacon` | `""` | SSM: CSV of retry-endpoint sources for the beacon group join |
 | `ssm_bootstrap_manifest` | `""` | SSM: CSV of shard-manifest sources for the manifest group join |
 | `ssm_bootstrap_subtree_announce` | `""` | SSM: CSV of subtree-announce emitter sources |

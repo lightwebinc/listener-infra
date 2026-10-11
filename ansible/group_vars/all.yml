@@ -51,7 +51,7 @@ mc_group_id: "0x000B"                # IANA group-id (default 0x000B = IANA Bitc
 # Listener role split + multicast addressing model (shard-listener v1.6.9+)
 listener_mode: "collapsed"      # collapsed | receiver | delivery
 delivery_addrs: ""              # receiver mode: comma-separated delivery host:port fan-out (empty = egress_addr)
-source_mode: "asm"              # asm | ssm — ssm needs MLDv2 sysctls; see docs/networking.md
+source_mode: "ssm"              # ssm (default) | asm (lab fallback); ssm needs MLDv2 sysctls and a ssm_bootstrap_* or publisher list
 ssm_bootstrap_beacon: ""        # SSM: CSV of retry-endpoint sources for the beacon group join
 ssm_bootstrap_manifest: ""      # SSM: CSV of shard-manifest sources for the manifest group join
 ssm_bootstrap_subtree_announce: ""  # SSM: CSV of subtree-announce emitter sources
