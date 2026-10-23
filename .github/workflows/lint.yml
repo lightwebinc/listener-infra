@@ -19,10 +19,10 @@ concurrency:
 
 jobs:
   ansible:
-    uses: lightwebinc/ci/.github/workflows/ansible-lint.yml@7f9020d8d83ebd09b9a9581aa0ee6cc2f78708e0 # v0.5.1
+    uses: lightwebinc/ci/.github/workflows/ansible-lint.yml@a5956ef6306c9df9ea212546ebe3e240b5315669 # v0.5.2
 
   terraform:
-    uses: lightwebinc/ci/.github/workflows/terraform.yml@7f9020d8d83ebd09b9a9581aa0ee6cc2f78708e0 # v0.5.1
+    uses: lightwebinc/ci/.github/workflows/terraform.yml@a5956ef6306c9df9ea212546ebe3e240b5315669 # v0.5.2
     with:
       dirs: '["terraform/modules/listener-node", "terraform/modules/bgp", "terraform/examples/generic", "terraform/examples/aws-ec2"]'
       trivyignores: terraform/examples/aws-ec2/.trivyignore
