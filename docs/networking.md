@@ -1,6 +1,6 @@
 # Networking
 
-The `networking` role configures the **ingress** side of the listener —
+The `networking` role configures the **ingress** side of the listener:
 the interface on which it joins multicast groups.
 
 ## Fabric address family
@@ -18,28 +18,28 @@ is only reachable over the IPv4 Internet.
 The listener joins IPv6 multicast groups directly on `ingress_iface`.
 Deploys:
 
-- `/etc/netplan/60-shard-listener.yaml` — IPv6 on the ingress iface
+- `/etc/netplan/60-shard-listener.yaml`: IPv6 on the ingress iface
   (DHCPv4 optional via `ingress_dhcp4`, defaults to `true` so a single-NIC
   host can still reach mgmt over v4; set `false` on multi-NIC or lab hosts
   where the ingress iface is dedicated to the fabric).
-- `/etc/sysctl.d/60-shard-listener.conf` — `accept_ra` settings to allow
+- `/etc/sysctl.d/60-shard-listener.conf`: `accept_ra` settings to allow
   IPv6 autoconf, plus `force_mld_version=2` and `mld_max_msf=1024`
   (configurable via `networking_mld_max_msf`). MLDv2 is mandatory when
-  the listener runs in `sourceMode=ssm` (Posture B/C/D in the
-  [SSM Support Plan](https://github.com/lightwebinc/bsv-multicast/blob/main/DESIGN.md#source-specific-multicast-ssm)),
+  the listener runs in `sourceMode=ssm` (see
+  [DESIGN.md, Source-Specific Multicast](https://github.com/lightwebinc/bsv-multicast/blob/main/DESIGN.md#source-specific-multicast-ssm)),
   and the kernel default of 64 source filters per socket is below the
-  production publisher count — `MCAST_JOIN_SOURCE_GROUP` returns
+  production publisher count; `MCAST_JOIN_SOURCE_GROUP` returns
   `ENOBUFS` once exceeded. Pick `≥ 2 × N_publishers`.
 
 No `ip -6 route add ff00::/8` is needed on the receive side: MLD joins
 handle reception regardless of routing table. (The ingress proxy *does*
-need this — it is the send side.)
+need this; it is the send side.)
 
 ### `ingress_mode: gre`
 
 The listener receives multicast over a GRE tunnel. The **inner** payload
 is always IPv6 (the fabric is IPv6-only). The **outer** transport may be
-IPv4 or IPv6 — controlled by `gre_outer_proto`:
+IPv4 or IPv6, controlled by `gre_outer_proto`:
 
 | `gre_outer_proto` | Linux tunnel type | FreeBSD    | Typical use                |
 |-------------------|-------------------|------------|-----------------------------|
@@ -48,7 +48,7 @@ IPv4 or IPv6 — controlled by `gre_outer_proto`:
 
 Deploys:
 
-- `/etc/netplan/61-shard-listener-gre.yaml` — tunnel definition +
+- `/etc/netplan/61-shard-listener-gre.yaml`: tunnel definition +
   multicast route on the tunnel.
 - When using this mode, set `ingress_iface: gre6-bsl` on each host so the
   listener joins groups on the tunnel interface.
@@ -57,7 +57,7 @@ Variables:
 
 | Variable           | Meaning                                                     |
 |--------------------|--------------------------------------------------------------|
-| `gre_outer_proto`  | `ipv6` or `ipv4` — chooses the outer-transport address family |
+| `gre_outer_proto`  | `ipv6` or `ipv4`; chooses the outer-transport address family |
 | `gre_local_ip6`    | Local IPv6 outer endpoint (when `gre_outer_proto=ipv6`)       |
 | `gre_remote_ip6`   | Remote IPv6 outer endpoint (when `gre_outer_proto=ipv6`)      |
 | `gre_local_ip4`    | Local IPv4 outer endpoint (when `gre_outer_proto=ipv4`)       |
@@ -84,7 +84,7 @@ conjunction with `mc_group_id`).
 When `enable_bgp: true` and `bgp_vip` / `bgp_vip6` is set, a third netplan
 file is deployed:
 
-- `/etc/netplan/62-shard-listener-vip.yaml` — VIP on loopback (`lo`).
+- `/etc/netplan/62-shard-listener-vip.yaml`: VIP on loopback (`lo`).
 
 The VIP is this listener's unicast identity inside the fabric.
 
@@ -101,7 +101,7 @@ On FreeBSD the role edits `/etc/rc.conf` directly:
 ## Verifying multicast receive
 
 ```sh
-# Linux — show joined groups
+# Linux: show joined groups
 ip -6 maddr show dev eth0
 
 # Inspect live receive

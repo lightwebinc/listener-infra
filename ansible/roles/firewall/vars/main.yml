@@ -1,28 +1,4 @@
 ---
-# Resolved fabric interface name for template rendering.
-firewall_fabric_iface: "{{ ingress_iface if ingress_iface is string else ingress_iface[0] }}"
-
-# Parse retry_endpoints (comma-separated host:port) into IPv4/IPv6 host lists.
-# NOTE: DNS must be stable at play time. Hostnames that resolve to multiple
-# addresses will only have the *first* address allow-listed here; re-run
-# `site.yml --tags firewall` after DNS changes.
-firewall_retry_endpoint_list: >-
-  {{
-    (retry_endpoints | default('')).split(',')
-      | map('trim')
-      | reject('equalto', '')
-      | list
-  }}
-
-firewall_retry_endpoint_hosts: >-
-  {{
-    firewall_retry_endpoint_list
-      | map('regex_replace', ':[0-9]+$', '')
-      | map('regex_replace', '^\[', '')
-      | map('regex_replace', '\]$', '')
-      | list
-  }}
-
 # Parse egress_addr (host:port) into host + port for firewall rule rendering.
 firewall_egress_host: >-
   {{
@@ -33,5 +9,29 @@ firewall_egress_host: >-
   }}
 firewall_egress_port: "{{ egress_addr | regex_replace('^.*:', '') }}"
 
+# Resolved fabric interface name for template rendering.
+firewall_fabric_iface: "{{ ingress_iface if ingress_iface is string else ingress_iface[0] }}"
+
 # Parse metrics_addr (":PORT" or "HOST:PORT") into port.
 firewall_metrics_port: "{{ metrics_addr | regex_replace('^.*:', '') }}"
+
+# Parse retry_endpoints (comma-separated host:port) into IPv4/IPv6 host lists.
+# NOTE: DNS must be stable at play time. Hostnames that resolve to multiple
+# addresses will only have the *first* address allow-listed here; re-run
+# `site.yml --tags firewall` after DNS changes.
+firewall_retry_endpoint_hosts: >-
+  {{
+    firewall_retry_endpoint_list
+      | map('regex_replace', ':[0-9]+$', '')
+      | map('regex_replace', '^\[', '')
+      | map('regex_replace', '\]$', '')
+      | list
+  }}
+
+firewall_retry_endpoint_list: >-
+  {{
+    (retry_endpoints | default('')).split(',')
+      | map('trim')
+      | reject('equalto', '')
+      | list
+  }}

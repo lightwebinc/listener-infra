@@ -35,7 +35,7 @@ The invariant this repo enforces is:
 | Out       | non-fabric             | `EGRESS_PROTO` → `EGRESS_ADDR` (downstream forward)          |
 | Out       | non-fabric             | DNS (53), NTP (123), HTTP/S (80/443) for OS updates          |
 | Out       | non-fabric             | TCP → dedup / ingress-mark backend ports (only when configured) |
-| In / Out  | any                    | BGP (TCP/179) — **only when `enable_bgp: true`**             |
+| In / Out  | any                    | BGP (TCP/179), **only when `enable_bgp: true`**              |
 | Forward   | any                    | Always dropped                                               |
 
 ## Implementation
@@ -73,7 +73,7 @@ pfctl -a shard-listener -sr
 
 - **Adding a retry endpoint.** Edit `retry_endpoints` in inventory (or
   per-host vars) and re-run `ansible-playbook site.yml --tags firewall`.
-  The template resolves hostnames at play time — after DNS changes, re-run
+  The template resolves hostnames at play time; after DNS changes, re-run
   the firewall role.
 - **Adding a management CIDR.** Extend `mgmt_cidrs_v4` / `mgmt_cidrs_v6`
   and re-run with `--tags firewall`.
@@ -86,17 +86,16 @@ pfctl -a shard-listener -sr
 
 ## What this role does *not* protect against
 
-- Compromise of a legitimate `retry_endpoint` — the listener dispatches
+- Compromise of a legitimate `retry_endpoint`: the listener dispatches
   NACK datagrams to it, so it is trusted by design.
-- A consumer that pivots through the `egress_addr` target host — downstream
+- A consumer that pivots through the `egress_addr` target host: downstream
   topology protection is out of scope here; use network segmentation
   upstream.
-- Multicast flooding: in this repo's `asm` default source mode (a legacy
-  default — the fleet/chart default is `ssm`) the listener
-  accepts all UDP on `LISTEN_PORT` from any multicast source on the
-  fabric iface. shard-listener's `-source-mode ssm` (MLDv2 source-include
-  joins) restricts reception to discovered/bootstrap sources — see
-  `source_mode` in `group_vars/all.yml` and the MLDv2 sysctl notes in
+- Multicast flooding: under `source_mode: asm` the listener accepts all
+  UDP on `LISTEN_PORT` from any multicast source on the fabric iface. The
+  default `source_mode: ssm` (MLDv2 source-include joins) restricts
+  reception to discovered/bootstrap sources; see `source_mode` in
+  `group_vars/all.yml` and the MLDv2 sysctl notes in
   [`networking.md`](networking.md).
 
 ## Cloud SGs vs host firewall

@@ -4,13 +4,34 @@
 # Live tunings measured to gain +7.3% on the 256 B Bitcoin P2PKH hot path
 # on Intel i7-8700K + Mellanox ConnectX-4 Lx.
 
-# Whether to apply the perf-tuning role at all. Off by default in case an
-# operator wants stock OS behaviour.
+# Disable deep CPU C-states. Two layers:
+#   - Runtime sysfs writes (boot-time systemd oneshot below).
+#   - Kernel cmdline params (permanent, but requires reboot).
+# Operator must reboot after enabling perf_tuning_grub_cmdline.
+perf_tuning_cstates_to_disable: [3, 4, 5, 6, 7, 8, 9, 10]
+perf_tuning_disable_cstates: true
+
+# irqbalance is incompatible with manual IRQ affinity for multi-queue NICs.
+# Stop and mask the service so it can't be restarted by package upgrades.
+perf_tuning_disable_irqbalance: true
+
+# Whether to apply the perf-tuning role at all. On by default; set false if
+# an operator wants stock OS behaviour.
 perf_tuning_enabled: true
+
+# When true, the role appends intel_idle.max_cstate=1 + processor.max_cstate=1
+# to GRUB_CMDLINE_LINUX_DEFAULT and runs update-grub. Set to false if your
+# fleet manages cmdline by other means (custom kernel, cloud-init, etc).
+perf_tuning_grub_cmdline: true
+
+# Per-interface txqueuelen via systemd-networkd link drop-in. Skipped if
+# perf_tuning_iface is empty (e.g. on hosts where the NIC name is
+# inventory-derived rather than fixed).
+perf_tuning_iface: "{{ networking_egress_iface | default('') }}"
 
 # /etc/sysctl.d settings. Reload-on-change handled by the role.
 perf_tuning_sysctls:
-  # UDP socket buffers — bump well above the 4 MiB default so kernel UDP
+  # UDP socket buffers: bump well above the 4 MiB default so kernel UDP
   # queue isn't the lid at high PPS. The proxy still asks for SO_RCVBUF
   # via -recv-buf-bytes; this lifts the rmem_max cap.
   net.core.rmem_max: "268435456"        # 256 MiB
@@ -23,24 +44,4 @@ perf_tuning_sysctls:
   net.core.busy_poll: "50"              # microseconds spin before sleep
   net.core.busy_read: "50"
 
-# Per-interface txqueuelen via systemd-networkd link drop-in. Skipped if
-# perf_tuning_iface is empty (e.g. on hosts where the egress NIC name is
-# inventory-derived rather than fixed).
-perf_tuning_iface: "{{ networking_egress_iface | default('') }}"
 perf_tuning_txqueuelen: 10000
-
-# Disable deep CPU C-states. Two layers:
-#   - Runtime sysfs writes (boot-time systemd oneshot below).
-#   - Kernel cmdline params (permanent, but requires reboot).
-# Operator must reboot after enabling perf_tuning_grub_cmdline.
-perf_tuning_disable_cstates: true
-perf_tuning_cstates_to_disable: [3, 4, 5, 6, 7, 8, 9, 10]
-
-# When true, the role appends intel_idle.max_cstate=1 + processor.max_cstate=1
-# to GRUB_CMDLINE_LINUX_DEFAULT and runs update-grub. Set to false if your
-# fleet manages cmdline by other means (custom kernel, cloud-init, etc).
-perf_tuning_grub_cmdline: true
-
-# irqbalance is incompatible with manual IRQ affinity for multi-queue NICs.
-# Stop and mask the service so it can't be restarted by package upgrades.
-perf_tuning_disable_irqbalance: true

@@ -25,11 +25,12 @@ common_disk_maintenance_splay_sec: 3600
 # skips any tree with a file modified inside this window, which also makes it a
 # no-op on nodes that converge more often than it fires.
 common_gocache_max_age_days: 7
-# journald's own ceiling. SystemKeepFree is the second guard: it yields disk back
-# even when the journal is under SystemMaxUse but the filesystem is nearly full.
-common_journal_max_use: "300M"
+# journald's own ceiling (SystemMaxUse). SystemKeepFree is the second guard: it
+# yields disk back even when the journal is under SystemMaxUse but the filesystem
+# is nearly full.
 common_journal_keep_free: "1G"
 common_journal_max_retention: "2week"
+common_journal_max_use: "300M"
 
 # Where the reclaim script (and disk_hygiene.yml) drops its node_exporter
 # textfile metric. Declared here rather than left to the inline

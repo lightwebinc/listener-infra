@@ -3,11 +3,11 @@
 [![Lint](https://github.com/lightwebinc/listener-infra/actions/workflows/lint.yml/badge.svg)](https://github.com/lightwebinc/listener-infra/actions/workflows/lint.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-> Part of the [**BSV Layered Multicast**](https://github.com/lightwebinc/bsv-multicast) open-source project — see the main repository for the full architecture, design docs, and BRC specifications.
+> Part of the [**BSV Layered Multicast**](https://github.com/lightwebinc/bsv-multicast) open-source project; see the main repository for the full architecture, design docs, and BRC specifications.
 
 Ansible and Terraform automation for deploying
 [`shard-listener`](https://github.com/lightwebinc/shard-listener)
-nodes — multicast subscribers that filter and forward BSV transactions to
+nodes, multicast subscribers that filter and forward BSV transactions to
 downstream consumers.
 
 ```text
@@ -54,4 +54,4 @@ docs/        Per-topic documentation
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0; see [LICENSE](LICENSE).

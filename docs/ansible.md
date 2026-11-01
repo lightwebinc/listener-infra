@@ -28,12 +28,12 @@ ansible/
 
 `site.yml` runs roles in this order:
 
-1. `common` — install packages, Go toolchain, journald cap + disk-reclaim timer (Linux); opt-in `--tags os_update` patching
-2. `perf-tuning` — high-PPS host tuning (UDP buffers, busy-poll, C-states)
-3. `shard-listener` — build binary, install service
-4. `networking` — configure `ingress_iface`, GRE, BGP VIP
-5. `firewall` *(when `enable_firewall: true`)* — lock down the fabric perimeter
-6. `bgp` *(when `enable_bgp: true`)* — BIRD2 or FRR
+1. `common`: install packages, Go toolchain, journald cap + disk-reclaim timer (Linux); opt-in `--tags os_update` patching
+2. `perf-tuning`: high-PPS host tuning (UDP buffers, busy-poll, C-states)
+3. `shard-listener`: build binary, install service
+4. `networking`: configure `ingress_iface`, GRE, BGP VIP
+5. `firewall` *(when `enable_firewall: true`)*: lock down the fabric perimeter
+6. `bgp` *(when `enable_bgp: true`)*: BIRD2 or FRR
 
 Firewall runs **after** networking so interface names resolve, and **before**
 BGP so TCP/179 is permitted when the daemon starts.
@@ -44,13 +44,13 @@ Because `group_vars/all.yml` has higher precedence than inventory group vars,
 the following must be set on each host (not in group vars):
 
 - `ingress_iface`
-- `num_workers` — leave at the default `1` for multicast receive (see note below)
-- `mgmt_cidrs_v4`, `mgmt_cidrs_v6` — firewall allow-list; `group_vars/all.yml` defaults to empty lists
+- `num_workers`: leave at the default `1` for multicast receive (see note below)
+- `mgmt_cidrs_v4`, `mgmt_cidrs_v6`: firewall allow-list; `group_vars/all.yml` defaults to empty lists
 - `ansible_host`, `ansible_user`, `ansible_ssh_private_key_file`
 - `bgp_router_id`, `bgp_peer_ip`, `bgp_peer_ip6` (when `enable_bgp` is true)
 
 > **`num_workers` and multicast:** Linux delivers multicast datagrams to every
-> socket in a SO_REUSEPORT group — it does not load-balance them. Running
+> socket in a SO_REUSEPORT group; it does not load-balance them. Running
 > `num_workers > 1` causes each frame to be processed and forwarded N times,
 > doubling (or more) all metrics and egress traffic. `group_vars/all.yml` already
 > defaults to `1`; raise it only on a host running `listener_mode: delivery`,
@@ -110,7 +110,7 @@ Every variable in `group_vars/all.yml`, with its default.
 | `shard_bits` | `2` | Must match proxy |
 | `mc_scope` | `site` | link \| site \| org \| global |
 | `mc_group_id` | `0x000B` | IANA group-id (default 0x000B = IANA Bitcoin) |
-| `listener_mode` | `collapsed` | Or `receiver` / `delivery` (P3b role split) |
+| `listener_mode` | `collapsed` | Or `receiver` / `delivery` |
 | `delivery_addrs` | `""` | receiver mode: comma-separated delivery host:port fan-out (empty = egress_addr) |
 | `source_mode` | `ssm` | Default. Needs MLDv2 sysctls + `ssm_bootstrap_*`; `asm` is the lab fallback |
 | `ssm_bootstrap_beacon` | `""` | SSM: CSV of retry-endpoint sources for the beacon group join |
@@ -145,7 +145,7 @@ Every variable in `group_vars/all.yml`, with its default.
 | `manifest_consumer_enabled` | `false` | BRC-139 manifest consumer (MANIFEST_CONSUMER_ENABLED) and additive auto-join from manifests (SHARD_INCLUDE_FROM_MANIFEST; needs the consumer). |
 | `shard_include_from_manifest` | `false` |  |
 | `num_workers` | `1` | Already `1` in `group_vars/all.yml`; raise only for `listener_mode: delivery` (see note) |
-| `metrics_addr` | `:9200` | Listener metrics (not :9100 — avoids collision with proxy) |
+| `metrics_addr` | `:9200` | Listener metrics (not :9100, which the proxy uses) |
 | `otlp_endpoint` | `""` | OTLP gRPC push; empty disables |
 | `otlp_interval` | `30s` | OTLP metric export cadence |
 | `log_format` | `json` | text \| json (json for fleet aggregation) |
@@ -157,7 +157,7 @@ Every variable in `group_vars/all.yml`, with its default.
 | `verify_payload_hash` | `false` | Verify SHA256d(payload)==TxID on V2 frames; drop on mismatch |
 | `require_block_pow` | `true` | BRC-131 announce PoW gate; **default ON** (bin parity) |
 | `min_pow_bits` | `0` | Compact nBits floor; `0` = header self-consistency only |
-| `mc_egress_enabled` | `false` | Multicast egress (domain bridging) — disabled by default |
+| `mc_egress_enabled` | `false` | Multicast egress (domain bridging); disabled by default |
 | `mc_egress_iface` | `""` |  |
 | `mc_egress_port` | `0` |  |
 | `mc_egress_scope` | `""` |  |
@@ -208,13 +208,18 @@ Every variable in `group_vars/all.yml`, with its default.
 | `ingress_mode` | `ethernet` | Or `gre` (then set `ingress_iface: gre6-bsl`) |
 | `ingress_iface` | `eth0` | **Must be set per-host** (group_vars precedence) |
 | `mc_route_prefix` | `""` | Multicast route prefix for the ingress interface. Empty = auto-derive from mc_scope (link=ff02::/16, site=ff05::/16, etc.) |
-| `gre_outer_proto` | `ipv6` | ipv6 \| ipv4 — outer transport for the GRE tunnel |
+| `gre_outer_proto` | `ipv6` | ipv6 \| ipv4; outer transport for the GRE tunnel |
 | `gre_iface` | `gre6-bsl` | Tunnel interface name |
 | `gre_inner_ipv6` | `""` | IPv6 address/prefix assigned to the tunnel iface |
 | `gre_local_ip6` | `""` | Local outer endpoint (ipv6 outer) |
 | `gre_remote_ip6` | `""` | Remote outer endpoint (ipv6 outer) |
 | `gre_local_ip4` | `""` | Local outer endpoint (ipv4 outer) |
 | `gre_remote_ip4` | `""` | Remote outer endpoint (ipv4 outer) |
+
+Two `networking` role knobs are not in `group_vars/all.yml` and default inside
+the role: `ingress_dhcp4` (`true`; DHCPv4 on the ingress NIC) and
+`networking_mld_max_msf` (`1024`; `net.ipv6.mld_max_msf`). See
+[networking.md](networking.md).
 
 ### BGP (optional)
 

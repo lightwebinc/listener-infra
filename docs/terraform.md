@@ -36,5 +36,5 @@ nftables ruleset from the `firewall` role is the fine-grained one (see
 | `metrics_addr`    | `:9200`    | Avoid collision with proxy (`:9100`)             |
 | `bgp_local_as`    | `65002`    | Different from proxy (`65001`)                   |
 | `enable_firewall` | `true`     | Default-on for security                          |
-| `num_workers`     | `1`        | SO_REUSEPORT delivers every multicast frame to each worker — `>1` forwards frames ×N. Keep `1`. |
-| `otlp_interval`   | `"30s"`    | Preserves prior hardcoded value                  |
+| `num_workers`     | `1`        | SO_REUSEPORT delivers every multicast frame to each worker; `>1` forwards frames ×N. Keep `1`. |
+| `otlp_interval`   | `"30s"`    | Matches the binary default                       |

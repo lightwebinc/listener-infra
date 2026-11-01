@@ -1,7 +1,7 @@
 # Architecture
 
 `listener-infra` is the deployment/operations repo for
-[`shard-listener`](https://github.com/lightwebinc/shard-listener) — the
+[`shard-listener`](https://github.com/lightwebinc/shard-listener), the
 inverse side of the `ingress-infra` / `shard-proxy` pipeline. Where
 the ingress proxy _sends_ sharded transaction frames into an IPv6 multicast
 fabric, the listener _receives_ those frames, filters by shard / subtree, and
@@ -33,15 +33,15 @@ BRC-132 subtree data, BRC-134 anchor frames, and BRC-139 shard manifests
 on the multicast fabric. Frame formats, filtering, gap tracking, NACK/retransmission, and
 beacon discovery are documented in the service and project repos:
 
-- [shard-listener — Architecture](https://github.com/lightwebinc/shard-listener/blob/main/docs/architecture.md)
-- [shard-listener — Configuration](https://github.com/lightwebinc/shard-listener/blob/main/docs/configuration.md)
-- [bsv-multicast — DESIGN.md](https://github.com/lightwebinc/bsv-multicast/blob/main/DESIGN.md)
+- [shard-listener: Architecture](https://github.com/lightwebinc/shard-listener/blob/main/docs/architecture.md)
+- [shard-listener: Configuration](https://github.com/lightwebinc/shard-listener/blob/main/docs/configuration.md)
+- [bsv-multicast: DESIGN.md](https://github.com/lightwebinc/bsv-multicast/blob/main/DESIGN.md)
 - BRC specifications: `bsv-multicast/docs/brc-{124,126,127,128,129,130,131,132,133,134,135,139,142,143,144,148,149}-*.md`
 
 ## Data plane
 
 1. **Ingress interface** (`ingress_iface` / `gre6-bsl`) joins a **subset**
-   of the per-shard IPv6 multicast groups via MLD — see
+   of the per-shard IPv6 multicast groups via MLD; see
    [Group subscription](#group-subscription) below. The listener receives
    frames directly on this interface; no routing-table entry is required
    on the receive side (unlike the proxy's send path, which needs
@@ -68,7 +68,7 @@ the socket in the first place.
 
 > **Best practice:** always set `shard_include` in production. A listener
 > with `shard_include=""` joins every group on the fabric and receives
-> every frame — which is rarely what you want and puts unnecessary load on
+> every frame, which is rarely what you want and puts unnecessary load on
 > the NIC, kernel, and parser.
 
 ## Control plane

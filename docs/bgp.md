@@ -13,7 +13,7 @@ missing frame plus a small ACK/MISS/THROTTLED control response. Those
 replies are addressed to the NACK's source address, so that address must
 be routable from the retry endpoints. On tunnelled fabrics the kernel's
 per-route source pick (e.g. a point-to-point tunnel inner address) can
-misroute the reply off the tunnel — a routable unicast identity avoids
+misroute the reply off the tunnel; a routable unicast identity avoids
 this.
 
 The loopback VIP (`bgp_vip` / `bgp_vip6`) is the listener's own unicast
@@ -24,7 +24,7 @@ identity inside the fabric.
 The fabric is IPv6-only, so `bgp_prefix6` / `bgp_vip6` are the
 fabric-relevant fields. `bgp_prefix` / `bgp_vip` (IPv4) remain available
 for environments where the BGP session also carries IPv4 toward an
-upstream provider — they do not participate in fabric reachability.
+upstream provider; they do not participate in fabric reachability.
 
 ## Daemon choice
 
@@ -59,14 +59,14 @@ Select via `bgp_daemon: bird2` or `bgp_daemon: frr`.
 
 The role installs three pieces:
 
-- `/usr/local/bin/bsl-bgp-check.sh` — probes
+- `/usr/local/bin/bsl-bgp-check.sh`: probes
   `http://127.0.0.1:9200{{ bgp_health_path }}` (default `/healthz`) and
   enables/disables the upstream BGP protocol accordingly. Set
   `bgp_health_path: /readyz` to withdraw at drain start (graceful
   anycast shed).
-- `bsl-bgp-check.service` + `bsl-bgp-check.timer` (systemd) — runs every
+- `bsl-bgp-check.service` + `bsl-bgp-check.timer` (systemd): runs every
   10 s after a 30 s delay on boot.
-- `/usr/local/bin/bsl-bgp-withdraw.sh` — called from
+- `/usr/local/bin/bsl-bgp-withdraw.sh`: called from
   `shard-listener.service` `ExecStop=` to shut down sessions
   before the listener exits.
 
