@@ -24,10 +24,9 @@ perf_tuning_enabled: true
 # fleet manages cmdline by other means (custom kernel, cloud-init, etc).
 perf_tuning_grub_cmdline: true
 
-# Per-interface txqueuelen via systemd-networkd link drop-in. Skipped if
-# perf_tuning_iface is empty (e.g. on hosts where the NIC name is
-# inventory-derived rather than fixed).
-perf_tuning_iface: "{{ networking_egress_iface | default('') }}"
+# Per-interface txqueuelen via systemd-networkd link drop-in, on the
+# multicast receive NIC (the first ingress_iface). Set it empty to skip.
+perf_tuning_iface: "{{ (ingress_iface if ingress_iface is string else ingress_iface[0]) if ingress_iface is defined else '' }}"
 
 # /etc/sysctl.d settings. Reload-on-change handled by the role.
 perf_tuning_sysctls:
