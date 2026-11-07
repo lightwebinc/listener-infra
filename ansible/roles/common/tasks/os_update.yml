@@ -8,7 +8,7 @@
 # in practice FreeBSD had no patch path at all. Dispatching mirrors how the role
 # already loads "{{ ansible_os_family | lower }}.yml" for its OS-specific setup.
 #
-# Still opt-in (`never` on the include in main.yml) — nothing patches a node
+# Still opt-in (`never` on the include in main.yml), nothing patches a node
 # unless an operator, or a maintenance pass, asks for it by tag.
 
 - name: Debian/Ubuntu package upgrade
@@ -26,5 +26,5 @@
     msg: >-
       os_update has no path for ansible_os_family={{ ansible_os_family }}
       on {{ inventory_hostname }}. Add one rather than leaving the host
-      unpatched — a silent skip reads as "patched" in every report.
+      unpatched: a silent skip reads as "patched" in every report.
   when: ansible_os_family not in ['Debian', 'FreeBSD']

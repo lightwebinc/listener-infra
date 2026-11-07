@@ -1,5 +1,5 @@
 # nftables ruleset for shard-listener
-# Managed by Ansible — do not edit manually
+# Managed by Ansible; do not edit manually
 #
 # Perimeter model:
 #   * Fabric interface ({{ firewall_fabric_iface }}): multicast-in (data + beacons) + NACK out / unicast replies in only
@@ -50,11 +50,11 @@ table inet shard-listener {
         iifname "lo" accept
 
         # Fabric is IPv6-only. Drop any IPv4 traffic arriving on the fabric iface
-        # regardless of established state (explicit expression of intent — the
+        # regardless of established state (explicit expression of intent, the
         # default drop would handle it, but we log it for investigability).
         iifname "{{ firewall_fabric_iface }}" meta nfproto ipv4 counter drop
 
-        # ICMPv6 — NDP + MLD + diagnostics (required for multicast + link health)
+        # ICMPv6: NDP + MLD + diagnostics (required for multicast + link health)
         icmpv6 type {
             nd-neighbor-solicit, nd-neighbor-advert,
             nd-router-solicit, nd-router-advert,
@@ -64,14 +64,14 @@ table inet shard-listener {
             packet-too-big, parameter-problem, time-exceeded
         } accept
 
-        # ICMPv4 — minimal, non-fabric only
+        # ICMPv4: minimal, non-fabric only
         iifname != "{{ firewall_fabric_iface }}" ip protocol icmp icmp type { echo-request, echo-reply, destination-unreachable } accept
 
-        # Multicast receive — only on fabric interface: data frames (listen_port)
+        # Multicast receive: only on fabric interface: data frames (listen_port)
         # and beacon ADVERTs from retry endpoints (beacon_port).
         iifname "{{ firewall_fabric_iface }}" ip6 daddr ff00::/8 udp dport { {{ listen_port }}, {{ beacon_port }} } accept
 
-        # ACK/MISS responses from retry endpoints — unicast UDP replies to
+        # ACK/MISS responses from retry endpoints: unicast UDP replies to
         # NACK requests.  Explicit rule avoids reliance on conntrack which is
         # unreliable in some environments (LXD VMs, certain kernel configs).
 {% if retry_v6_hosts | length > 0 %}
@@ -83,7 +83,7 @@ table inet shard-listener {
         iifname != "{{ firewall_fabric_iface }}" ip6 saddr @mgmt_allow_v6 tcp dport { 22, {{ firewall_metrics_port }} } accept
 
 {% if ingress_mode | default('ethernet') == 'gre' %}
-        # GRE outer-transport — inbound tunnel encapsulation from remote endpoint,
+        # GRE outer-transport: inbound tunnel encapsulation from remote endpoint,
         # arriving on a non-fabric interface (physical / mgmt iface). The decapsulated
         # IPv6 multicast is then received on the fabric (tunnel) interface and matched
         # by the multicast rule above.
@@ -129,14 +129,14 @@ table inet shard-listener {
         } accept
         oifname != "{{ firewall_fabric_iface }}" ip protocol icmp accept
 
-        # NACK dispatch — only to configured retry endpoints, only on fabric iface.
+        # NACK dispatch: only to configured retry endpoints, only on fabric iface.
         # Fabric is IPv6-only, so only the v6 retry set is permitted here.
 {% if retry_v6_hosts | length > 0 %}
         oifname "{{ firewall_fabric_iface }}" ip6 daddr @retry_ep_v6 meta l4proto udp accept
 {% endif %}
 
 {% if ingress_mode | default('ethernet') == 'gre' %}
-        # GRE outer-transport — outbound tunnel encapsulation to remote endpoint,
+        # GRE outer-transport: outbound tunnel encapsulation to remote endpoint,
         # leaving via a non-fabric (physical) interface.
 {% if gre_outer_proto | default('ipv6') == 'ipv4' and gre_remote_ip4 | default('') | length > 0 %}
         oifname != "{{ firewall_fabric_iface }}" ip  daddr {{ gre_remote_ip4 }} ip  protocol gre accept
@@ -146,12 +146,12 @@ table inet shard-listener {
 {% endif %}
 
 {% if mc_egress_enabled | default(false) | bool %}
-        # Multicast egress — re-emit frames onto egress domain (mc-egress-scope/port).
+        # Multicast egress: re-emit frames onto egress domain (mc-egress-scope/port).
         # Fires only on the fabric interface, IPv6 multicast only.
         oifname "{{ firewall_fabric_iface }}" ip6 daddr ff00::/8 udp dport {{ mc_egress_port if (mc_egress_port | int) > 0 else listen_port }} accept
 {% endif %}
 
-        # Downstream egress — unicast to egress_addr only, NOT on fabric iface
+        # Downstream egress: unicast to egress_addr only, NOT on fabric iface
 {% if firewall_egress_host | regex_search('^[0-9.]+$') %}
         oifname != "{{ firewall_fabric_iface }}" ip  daddr {{ firewall_egress_host }} {{ egress_proto }} dport {{ firewall_egress_port }} accept
 {% elif firewall_egress_host | regex_search('^[0-9a-fA-F:]+$') %}
@@ -167,7 +167,7 @@ table inet shard-listener {
         tcp sport 179 accept
 {% endif %}
 
-        # DNS / NTP / package management — non-fabric only
+        # DNS / NTP / package management, non-fabric only
         oifname != "{{ firewall_fabric_iface }}" udp dport { 53, 123 } accept
         oifname != "{{ firewall_fabric_iface }}" tcp dport { 53, 80, 443 } accept
 
@@ -180,7 +180,7 @@ table inet shard-listener {
      | map('trim') | select('match', '.+:.+') | list %}
 {% set dedup_backend_ports = dedup_backend_addrs | map('regex_replace', '^.*:', '') | unique | list %}
 {% if dedup_backend_ports | length > 0 %}
-        # Dedup / ingress-mark backends — outbound TCP on management interfaces only
+        # Dedup / ingress-mark backends: outbound TCP on management interfaces only
         oifname != "{{ firewall_fabric_iface }}" tcp dport { {{ dedup_backend_ports | join(', ') }} } accept
 {% endif %}
 
@@ -188,7 +188,7 @@ table inet shard-listener {
     }
 
     # ------------------------------------------------------------
-    # Forward chain — always drop (listener does not route)
+    # Forward chain: always drop (listener does not route)
     # ------------------------------------------------------------
     chain forward {
         type filter hook forward priority 0; policy drop;

@@ -99,7 +99,7 @@ resource "aws_security_group" "listener_node" {
   tags = merge(local.common_tags, { Name = "${var.name_prefix}-sg" })
 }
 
-# Multicast receive (UDP) — fabric is IPv6-only, so only a v6 ingress rule
+# Multicast receive (UDP): fabric is IPv6-only, so only a v6 ingress rule
 # exists. Decapsulated multicast on the fabric interface is filtered further
 # by the host-level nftables/pf ruleset.
 resource "aws_vpc_security_group_ingress_rule" "bsv_udp6" {
@@ -179,14 +179,14 @@ resource "aws_vpc_security_group_ingress_rule" "bgp6" {
 
 resource "aws_vpc_security_group_egress_rule" "all" {
   security_group_id = aws_security_group.listener_node.id
-  description       = "Allow all outbound (IPv4) — host-level nftables/pf narrows further"
+  description       = "Allow all outbound (IPv4): host-level nftables/pf narrows further"
   ip_protocol       = "-1"
   cidr_ipv4         = "0.0.0.0/0"
 }
 
 resource "aws_vpc_security_group_egress_rule" "all6" {
   security_group_id = aws_security_group.listener_node.id
-  description       = "Allow all outbound (IPv6) — host-level nftables/pf narrows further"
+  description       = "Allow all outbound (IPv6): host-level nftables/pf narrows further"
   ip_protocol       = "-1"
   cidr_ipv6         = "::/0"
 }

@@ -1,5 +1,5 @@
 ---
-# Repo convention: role names are kebab-case (shard-listener, mc-router, …) —
+# Repo convention: role names are kebab-case (shard-listener, mc-router, …),
 # established across every playbook, doc, and downstream tooling long before
 # ansible-lint 25 began enforcing the snake_case role-name pattern. Renaming the
 # roles would break every consumer for zero behavioural gain, so the rule is

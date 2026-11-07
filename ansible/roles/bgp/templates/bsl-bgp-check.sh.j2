@@ -1,11 +1,11 @@
 #!/bin/sh
-# BGP health-check for shard-listener — dual-stack
-# Managed by Ansible — do not edit manually
+# BGP health-check for shard-listener: dual-stack
+# Managed by Ansible; do not edit manually
 #
 # Withdraws BGP routes (IPv4 and IPv6) if the listener health endpoint is unhealthy.
 
-# Path is configurable: /healthz (liveness, default — withdraw when the listener
-# is dead) or /readyz (readiness — withdraw at drain START so a hostNetwork anycast
+# Path is configurable: /healthz (liveness, default: withdraw when the listener
+# is dead) or /readyz (readiness: withdraw at drain START so a hostNetwork anycast
 # pod sheds traffic to its peers BEFORE it stops).
 HEALTH_URL="http://127.0.0.1:{{ metrics_addr | regex_replace('^:', '') | default('9200') }}{{ bgp_health_path | default('/healthz') }}"
 

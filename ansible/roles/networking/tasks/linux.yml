@@ -16,7 +16,7 @@
     - { name: net.ipv6.conf.all.accept_ra, value: "1" }
     - { name: "net.ipv6.conf.{{ networking_ingress_iface }}.accept_ra", value: "1" }
     # MLDv2 is required when the listener runs in SSM mode
-    # (sourceMode=ssm). Forced for ASM too — harmless and avoids surprises
+    # (sourceMode=ssm). Forced for ASM too: harmless and avoids surprises
     # if the operator switches modes later.
     - { name: net.ipv6.conf.all.force_mld_version, value: "2" }
     # Per-socket source-filter cap. Linux default 64 is below production

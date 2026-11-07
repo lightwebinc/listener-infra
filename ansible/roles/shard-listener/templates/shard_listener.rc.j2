@@ -4,7 +4,7 @@
 # REQUIRE: NETWORKING DAEMON
 # KEYWORD: shutdown
 #
-# Managed by Ansible — do not edit manually
+# Managed by Ansible; do not edit manually
 #
 # Add the following to /etc/rc.conf to enable:
 #   shard_listener_enable="YES"
@@ -41,7 +41,7 @@ shard_listener_prestart()
         # knob never has to be added to an export list here. The previous
         # hand-maintained list had gone stale and silently withheld
         # REQUIRE_BLOCK_POW / MIN_POW_BITS (among others) from the daemon,
-        # which then fell back to its own defaults — so a fabric's
+        # which then fell back to its own defaults, so a fabric's
         # difficulty FLOOR was never applied on FreeBSD.
         set -a
         . "${shard_listener_config}"

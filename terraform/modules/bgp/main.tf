@@ -4,7 +4,7 @@ terraform {
 
 # This module produces a map of BGP-related Ansible variables
 # for use with the listener-node module's extra_ansible_vars input.
-# No resources are created here — it is a pure variable aggregation helper.
+# No resources are created here: it is a pure variable aggregation helper.
 
 locals {
   bgp_vars = {

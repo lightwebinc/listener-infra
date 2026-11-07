@@ -38,7 +38,7 @@ MGMT_PORTS = ("22", "$metrics_port")
 
 # A management port is adequately gated by any of:
 #   * a management CIDR set/table (<mgmt_v6>, @mgmt_allow_v4)
-#   * a pin to the encrypted admin overlay — reaching that interface already
+#   * a pin to the encrypted admin overlay, reaching that interface already
 #     requires a WireGuard key, a stronger gate than a source CIDR
 #   * a concrete source/destination address or CIDR literal
 # A pin to any OTHER interface (a WAN port, say) is not a gate, and neither is
@@ -94,7 +94,7 @@ def check_nft(path, lines):
             if re.search(r"dport\s+\{?[^}]*\b22\b", line) and not MGMT_SOURCES_NFT.search(line):
                 problems.append(f"{path}:{n}: SSH admitted without a mgmt source set: {line!r}")
     if not saw_drop_policy:
-        problems.append(f"{path}: no chain declares `policy drop` — ruleset is not default-deny")
+        problems.append(f"{path}: no chain declares `policy drop`, ruleset is not default-deny")
     return problems
 
 
@@ -112,7 +112,7 @@ def check_pf(path, lines):
         # 1. Catch-all: a pass carrying a protocol but no port/source/lo restriction.
         if re.search(r"\bproto\s+(tcp|udp)\b", line) and not PF_RESTRICTORS.search(line):
             problems.append(
-                f"{path}:{n}: catch-all pass with no port or source restriction — `quick` makes "
+                f"{path}:{n}: catch-all pass with no port or source restriction, `quick` makes "
                 f"it short-circuit every rule below it: {line!r}"
             )
         # 2. Spoofable source-port hole.
@@ -125,7 +125,7 @@ def check_pf(path, lines):
         if any(p in line for p in MGMT_PORTS) and not MGMT_SOURCES_PF.search(line):
             problems.append(f"{path}:{n}: management port admitted without a mgmt table: {line!r}")
     if not saw_block_all:
-        problems.append(f"{path}: no `block all` — ruleset is not default-deny")
+        problems.append(f"{path}: no `block all`: ruleset is not default-deny")
     return problems
 
 

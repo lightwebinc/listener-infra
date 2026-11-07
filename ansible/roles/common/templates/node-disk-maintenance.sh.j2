@@ -2,7 +2,7 @@
 # Managed by Ansible (common role). Do not edit.
 #
 # Bounded, unattended disk reclaim for fabric/edge nodes. Every step here is
-# either a cache the system will rebuild on demand or a log past its retention —
+# either a cache the system will rebuild on demand or a log past its retention,
 # nothing this script removes changes what the node serves.
 #
 # Deliberately NOT done here:
@@ -44,7 +44,7 @@ for d in /tmp/gopath /tmp/gocache; do
 done
 
 # 3. Journal. journald enforces SystemMaxUse itself at rotation, so this is the
-#    backstop for the case where it has not rotated yet — and the only thing that
+#    backstop for the case where it has not rotated yet, and the only thing that
 #    shrinks an over-cap journal on a node whose journald has not been restarted
 #    since the cap was deployed.
 if command -v journalctl >/dev/null 2>&1; then

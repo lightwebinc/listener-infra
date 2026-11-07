@@ -8,7 +8,7 @@
 #   2. a timer that performs the reclaims the converge does, so a fabric that is not
 #      being deployed to still holds flat free space.
 # The converge-time fixes (apt clean in os_update.yml, the Clean Go build caches
-# handler) stay where they are — they keep a single converge from being the thing
+# handler) stay where they are: they keep a single converge from being the thing
 # that fills the disk, which the timer would only clean up after the fact.
 
 - name: Cap journald on-disk size
@@ -64,7 +64,7 @@
       notify: Restart disk-maintenance timer
 
     # The textfile collector reads this directory on every scrape whether or not
-    # the timer has ever run, so it has to exist from the first converge — an
+    # the timer has ever run, so it has to exist from the first converge, an
     # unreadable directory makes node_exporter log a collector error per scrape.
     - name: Ensure node_exporter textfile directory exists
       ansible.builtin.file:
@@ -83,7 +83,7 @@
 
 # Disabling the flag has to REMOVE the units, not just stop configuring them: a
 # timer a previous pass installed keeps firing forever otherwise. Same reasoning as
-# the datapath-cleanup role — skipped is not removed.
+# the datapath-cleanup role: skipped is not removed.
 - name: Remove disk-maintenance when disabled
   when: not (common_disk_maintenance | bool)
   block:

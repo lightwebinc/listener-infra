@@ -15,7 +15,7 @@ all:
         # NOTE: ingress_iface and mgmt_cidrs_v4/v6 must be set per-host (not
         # here) to override the group_vars/all.yml defaults. Ansible gives
         # group_vars/all higher precedence than inventory group vars, so
-        # values placed here are silently ignored — for mgmt_cidrs_* that
+        # values placed here are silently ignored, for mgmt_cidrs_* that
         # renders an empty allow-list behind a policy-drop firewall.
 
       hosts:
@@ -64,7 +64,7 @@ all:
     # For local lab / CI testing, use the Docker harness in the
     # multicast-test repo. For Kubernetes, see multicast-kube-infra.
 
-    # iBGP upstream peers — run bgp-ibgp.yml against this group
+    # iBGP upstream peers: run bgp-ibgp.yml against this group
     # bgp_ibgp_nodes:
     #   vars:
     #     ansible_user: ubuntu

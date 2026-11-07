@@ -10,7 +10,7 @@ After=network-online.target
 Type=oneshot
 ExecStart=/usr/local/sbin/node-disk-maintenance.sh
 # Runs as root: apt-get clean, the Go module cache (0555 trees) and
-# `journalctl --vacuum-size` all need it. Kept unsandboxed for the same reason —
+# `journalctl --vacuum-size` all need it. Kept unsandboxed for the same reason,
 # the write set is /var/cache/apt, /tmp and /var/log/journal, which a strict
 # ProtectSystem would have to punch through one by one for no gain.
 Nice=10

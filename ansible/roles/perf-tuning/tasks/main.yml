@@ -1,5 +1,5 @@
 ---
-- name: Perf-tuning role — short-circuit if disabled
+- name: Perf-tuning role, short-circuit if disabled
   ansible.builtin.meta: end_play
   when: not perf_tuning_enabled | bool
 

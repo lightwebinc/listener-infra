@@ -1,5 +1,5 @@
 # pf anchor ruleset for shard-listener (FreeBSD)
-# Managed by Ansible — do not edit manually
+# Managed by Ansible; do not edit manually
 #
 # Perimeter model mirrors the nftables policy:
 #   * Fabric iface ({{ firewall_fabric_iface }}): multicast-in (data + beacons) + NACK out / unicast replies in only
@@ -45,7 +45,7 @@ block out quick on $fabric_if inet
 
 # NOTE: there is deliberately NO catch-all TCP pass here. A blanket
 # "pass quick proto tcp flags S/SA keep state" matches every TCP SYN in both
-# directions, and because it is `quick` it short-circuits every rule below it —
+# directions, and because it is `quick` it short-circuits every rule below it,
 # opening all bound ports (SSH, metrics, anything else) to the world and turning
 # the mgmt-CIDR rules further down into dead code. Inbound TCP is admitted only
 # by the explicit mgmt rule; outbound TCP by the explicit egress/DNS/HTTP rules.

@@ -14,7 +14,7 @@
 - name: Fetch base-system updates (FreeBSD)
   # --not-running-from-cron suppresses the mail-if-no-tty behaviour; it does not
   # change what is fetched. failed_when:false because a host already current
-  # exits non-zero on some releases — the install step below decides.
+  # exits non-zero on some releases: the install step below decides.
   ansible.builtin.command:
     cmd: freebsd-update --not-running-from-cron fetch
   register: common_fbsd_fetch
@@ -68,15 +68,15 @@
   register: common_fbsd_kernel_installed
   changed_when: false
 
-# The FreeBSD analogue of /var/run/reboot-required. Surfaced, never acted on —
+# The FreeBSD analogue of /var/run/reboot-required. Surfaced, never acted on,
 # see the header. An operator reboots this host by hand and verifies BGP/SSM
 # convergence afterwards.
-- name: Report pending reboot (FreeBSD — NOT automatic)
+- name: Report pending reboot (FreeBSD, NOT automatic)
   ansible.builtin.debug:
     msg: >-
       REBOOT REQUIRED on {{ inventory_hostname }}: running kernel
       {{ common_fbsd_kernel_running.stdout }} != installed
-      {{ common_fbsd_kernel_installed.stdout }}. Not rebooting automatically —
+      {{ common_fbsd_kernel_installed.stdout }}. Not rebooting automatically,
       a BGP-enabled FreeBSD node has no post-reboot SSM convergence gate, so
       reboot it by hand and verify multicast delivery before moving on.
   when: common_fbsd_kernel_running.stdout != common_fbsd_kernel_installed.stdout

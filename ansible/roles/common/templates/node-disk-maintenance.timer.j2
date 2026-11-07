@@ -11,7 +11,7 @@ OnCalendar={{ common_disk_maintenance_oncalendar }}
 # and put every node's root disk under I/O at once.
 RandomizedDelaySec={{ common_disk_maintenance_splay_sec }}
 # A node that was down (or a lab VM stopped for days) runs the missed reclaim on
-# next boot instead of waiting for the following window — the case where the disk
+# next boot instead of waiting for the following window, the case where the disk
 # is most likely to have drifted.
 Persistent=true
 AccuracySec=1m
