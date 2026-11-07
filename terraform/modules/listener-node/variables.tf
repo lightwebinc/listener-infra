@@ -71,13 +71,13 @@ variable "bgp_router_id" {
 }
 
 variable "bgp_vip" {
-  description = "IPv4 loopback VIP — this listener's unicast identity"
+  description = "IPv4 loopback VIP: this listener's unicast identity"
   type        = string
   default     = ""
 }
 
 variable "bgp_vip6" {
-  description = "IPv6 loopback VIP — this listener's unicast identity"
+  description = "IPv6 loopback VIP: this listener's unicast identity"
   type        = string
   default     = ""
 }
@@ -178,7 +178,7 @@ variable "listener_version" {
   # Keep in step with `listener_version` in ansible/group_vars/all.yml. The module
   # passes this as --extra-vars, which outranks group_vars, so "main" here floats
   # a Terraform-driven deploy off the pin the repo ships.
-  default = "v1.34.1"
+  default = "v1.35.0"
 }
 
 variable "mc_group_id" {
@@ -246,7 +246,7 @@ variable "num_workers" {
   # (no load-balancing), so num_workers > 1 forwards each frame N times. Keep 1
   # for multicast receive; the Ansible group_vars default is 1 to match. Values
   # above 1 are only safe for listener_mode: delivery (unicast ingest).
-  description = "Listener worker count (keep 1 — SO_REUSEPORT duplicates every multicast frame per worker)"
+  description = "Listener worker count (keep 1: SO_REUSEPORT duplicates every multicast frame per worker)"
   type        = number
   default     = 1
 }

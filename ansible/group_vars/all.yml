@@ -11,7 +11,7 @@ listener_repo: "https://github.com/lightwebinc/shard-listener.git"
 # Pin to a release tag; "main" floats and makes a rebuild non-reproducible.
 # Keep terraform/modules/listener-node/variables.tf `listener_version` in step:
 # the module passes it as --extra-vars, which outranks this file.
-listener_version: "v1.34.1"
+listener_version: "v1.35.0"
 listener_install_dir: "/opt/shard-listener"
 listener_bin_dir: "/usr/local/bin"
 listener_user: "shard-listener"
@@ -23,7 +23,7 @@ listener_force_build: false
 
 # Go toolchain version (used when building from source)
 # Must be >= the `go` directive in shard-listener's go.mod at listener_version
-# (v1.34.1 requires 1.26.2); the service builds with golang:1.27 in its own CI.
+# (v1.35.0 requires 1.26.2); the service builds with golang:1.27 in its own CI.
 go_version: "1.27.3"
 go_install_dir: "/usr/local/go"
 
@@ -48,7 +48,7 @@ shard_bits: 2
 mc_scope: "site"                # link | site | org | global
 mc_group_id: "0x000B"                # IANA group-id (default 0x000B = IANA Bitcoin)
 
-# Listener role split + multicast addressing model (shard-listener v1.6.9+)
+# Listener role split + multicast addressing model
 listener_mode: "collapsed"      # collapsed | receiver | delivery
 delivery_addrs: ""              # receiver mode: comma-separated delivery host:port fan-out (empty = egress_addr)
 source_mode: "ssm"              # ssm (default) | asm (lab fallback); ssm needs MLDv2 sysctls and a ssm_bootstrap_* or publisher list
@@ -63,15 +63,15 @@ subtree_include: ""             # Comma-separated hex subtree IDs to allow (V2 o
 subtree_exclude: ""             # Comma-separated hex subtree IDs to drop (V2 only)
 
 # BRC-148/149 BEEF object plane. A listener joins NO BEEF group unless one of
-# the two selectors below is set — the safe default, because the plane is a
+# the two selectors below is set, the safe default, because the plane is a
 # separate address band and joining it on every listener multiplies fabric
 # traffic. Enabling is a per-fabric choice; there are three modes:
 #
-#   1. off (default)  — both empty. The listener ignores the BEEF plane.
-#   2. topic election  — beef_topics: names or 64-hex TopicIDs. Derives BOTH
+#   1. off (default): both empty. The listener ignores the BEEF plane.
+#   2. topic election: beef_topics: names or 64-hex TopicIDs. Derives BOTH
 #      the plane joins and a topic filter, so the listener receives only the
 #      topics it elected. Use when the edge knows which overlays it serves.
-#   3. aggregator      — beef_groups: plane-RELATIVE group indices (0 ..
+#   3. aggregator: beef_groups: plane-RELATIVE group indices (0 ..
 #      2^beef_shard_bits-1). Joins the band with NO topic restriction. This is
 #      the mode for a broker-less OSS edge: it needs no topic catalog, because
 #      it elects by group index rather than by overlay name.
@@ -116,7 +116,7 @@ shard_include_from_manifest: false
 # Runtime / observability
 # MUST be 1 for any listener that JOINS multicast (collapsed/receiver mode).
 # Linux delivers a multicast datagram to EVERY SO_REUSEPORT socket bound to the
-# port — it does not load-balance them — so N workers receive N copies of every
+# port, it does not load-balance them, so N workers receive N copies of every
 # frame and forward N copies downstream. Measured on a 2-core node: 1000 frames
 # in, 1000 received on worker 0 AND 1000 on worker 1. Egress dedup does not
 # save you (egress_dedup_cap defaults to 0 = disabled), and 0 = NumCPU makes
@@ -124,10 +124,10 @@ shard_include_from_manifest: false
 # The Helm chart hardcodes 1 for the same reason. Raise this ONLY for
 # listener_mode: delivery, which ingests unicast and joins no group.
 num_workers: 1
-metrics_addr: ":9200"           # Listener metrics (not :9100 — avoids collision with proxy)
+metrics_addr: ":9200"           # Listener metrics (not :9100, avoids collision with proxy)
 otlp_endpoint: ""               # OTLP gRPC push; empty disables
 otlp_interval: "30s"            # OTLP metric export cadence
-# Unified logging — see shard-common/docs/logging.md
+# Unified logging: see shard-common/docs/logging.md
 log_format: "json"              # text | json (json for fleet aggregation)
 log_level: "info"               # debug|info|warn|error; runtime-togglable via POST /loglevel + SIGHUP
 trace_sampling: 0               # 0..1 trace head sampling (0 = off; exports via otlp_endpoint)
@@ -137,7 +137,7 @@ listener_debug: false
 verify_payload_hash: false      # Verify SHA256d(payload)==TxID on V2 frames; drop on mismatch
 
 # Permissionless PoW gate on BRC-131 block announces (validates work, not
-# identity). DEFAULT ON — matches the shard-listener binary default
+# identity). DEFAULT ON: matches the shard-listener binary default
 # (-require-block-pow / REQUIRE_BLOCK_POW = true). Announces failing the gate
 # are dropped before they reach egress or the BRC-135 header lane. Set false
 # only for lab fixtures that emit announces carrying no real work.
@@ -145,10 +145,10 @@ require_block_pow: true
 # Difficulty floor for the gate, in Bitcoin compact nBits form:
 #   "0x1d00ffff"  mainnet / testnet
 #   "0x207fffff"  devnet / regtest
-#   "0"           no floor — header self-consistency only (still gated)
+#   "0"           no floor: header self-consistency only (still gated)
 min_pow_bits: "0"
 
-# Multicast egress (domain bridging) — disabled by default
+# Multicast egress (domain bridging): disabled by default
 mc_egress_enabled: false
 mc_egress_iface: ""
 mc_egress_port: 0
@@ -185,7 +185,7 @@ egress_dedup_prefix: "bsl:egr:"  # key prefix (per-deployment namespace)
 egress_dedup_ttl_redis: "60s"     # tier-2 entry TTL
 egress_dedup_local_cap: 1048576   # tier-1 LRU capacity; 0 = disable egress dedup
 
-# In-process duplicate suppressor keyed on (groupIdx, subtreeID, SeqNum) —
+# In-process duplicate suppressor keyed on (groupIdx, subtreeID, SeqNum),
 # independent of the cross-listener TxID gate above. Sizing: workers × tps ×
 # egress_dedup_ttl.
 egress_dedup_cap: 0               # 0 = disabled
@@ -227,12 +227,12 @@ mc_route_prefix: ""
 #
 # The fabric itself is IPv6-only: the tunnel's *inner* payload is always IPv6
 # multicast. The tunnel's *outer* transport may be IPv6 (ip6gre on Linux, gif
-# on FreeBSD) or IPv4 (gre on Linux, gif on FreeBSD) — e.g. when the fabric
+# on FreeBSD) or IPv4 (gre on Linux, gif on FreeBSD), e.g. when the fabric
 # ingress is reached over the public IPv4 internet.
 #
 # When ingress_mode=gre, set ingress_iface to gre_iface on each host so the
 # listener joins groups on the tunnel interface.
-gre_outer_proto: "ipv6"         # ipv6 | ipv4 — outer transport for the GRE tunnel
+gre_outer_proto: "ipv6"         # ipv6 | ipv4, outer transport for the GRE tunnel
 gre_iface: "gre6-bsl"           # Tunnel interface name
 gre_inner_ipv6: ""              # IPv6 address/prefix assigned to the tunnel iface
 
