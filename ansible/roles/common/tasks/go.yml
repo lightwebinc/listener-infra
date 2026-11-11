@@ -13,6 +13,8 @@
 
 - name: Check if Go is already installed at the correct version
   ansible.builtin.command: "{{ go_install_dir }}/bin/go version"
+  environment:
+    GOTOOLCHAIN: local
   register: common_go_current_version
   changed_when: false
   failed_when: false
