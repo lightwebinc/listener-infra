@@ -90,7 +90,7 @@ Every variable in `group_vars/all.yml`, with its default.
 | `listener_user` | `shard-listener` | Service user |
 | `listener_group` | `shard-listener` | Service group |
 | `listener_local_binary` | `""` | Pre-built local binary to push; empty = clone and build on the host |
-| `listener_force_build` | `false` | Rebuild even when a binary already exists |
+| `listener_force_build` | `false` | Rebuild even when a binary already exists (a binary built with another Go release than `go_version` is always rebuilt) |
 | `go_version` | pinned in `group_vars/all.yml` | Go toolchain; must be at or above the `go` directive in the service go.mod at the pinned tag |
 | `go_install_dir` | `/usr/local/go` | Go toolchain install directory |
 

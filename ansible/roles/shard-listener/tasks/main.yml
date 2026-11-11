@@ -60,6 +60,15 @@
   register: listener_binary_stat
   when: listener_local_binary | default('') | length == 0
 
+- name: Read the Go version the existing binary was built with
+  ansible.builtin.command: "{{ go_install_dir }}/bin/go version {{ listener_install_dir }}/shard-listener"
+  register: listener_binary_go
+  changed_when: false
+  failed_when: false
+  when:
+    - listener_local_binary | default('') | length == 0
+    - listener_binary_stat.stat.exists
+
 - name: Build shard-listener binary
   ansible.builtin.command:
     # Folded scalar: the one-line form ran past the 160-char lint limit. Folding
@@ -80,7 +89,12 @@
   changed_when: true
   when:
     - listener_local_binary | default('') | length == 0
-    - not listener_binary_stat.stat.exists or (listener_force_build | default(false) | bool)
+    # A binary built with another Go release is rebuilt, so a toolchain move
+    # reaches a deployed node without listener_force_build.
+    - >-
+      not listener_binary_stat.stat.exists
+      or (listener_force_build | default(false) | bool)
+      or ('go' ~ go_version) not in (listener_binary_go.stdout | default(''))
 
 - name: Set ownership on pushed/built binary
   ansible.builtin.file:
