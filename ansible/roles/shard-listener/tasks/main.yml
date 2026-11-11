@@ -79,7 +79,10 @@
     fail_msg: >-
       {{ go_install_dir }} holds {{ listener_go_installed.stdout | default('no Go') }},
       not go{{ go_version }}. Run the common role first (the play without tags, or with the common tag).
-  when: listener_local_binary | default('') | length == 0
+  # A dry run installs nothing, so the toolchain it reads may be the one about to be replaced.
+  when:
+    - listener_local_binary | default('') | length == 0
+    - not ansible_check_mode
 
 - name: Read the Go version the existing binary was built with
   ansible.builtin.command: "{{ go_install_dir }}/bin/go version {{ listener_install_dir }}/shard-listener"
@@ -103,6 +106,7 @@
   environment:
     PATH: "{{ go_install_dir }}/bin:{{ ansible_env.PATH }}"
     CGO_ENABLED: "0"
+    GOTOOLCHAIN: local
     GOOS: "{{ 'freebsd' if ansible_os_family == 'FreeBSD' else 'linux' }}"
     GOARCH: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
     HOME: "/tmp"

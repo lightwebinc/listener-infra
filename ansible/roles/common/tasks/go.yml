@@ -20,7 +20,7 @@
 - name: Download and install Go toolchain
   when: >
     common_go_current_version.rc != 0 or
-    go_version not in common_go_current_version.stdout
+    ('go' ~ go_version) not in common_go_current_version.stdout.split()
   block:
     - name: Download Go tarball
       ansible.builtin.get_url:
