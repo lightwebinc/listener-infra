@@ -60,10 +60,32 @@
   register: listener_binary_stat
   when: listener_local_binary | default('') | length == 0
 
+- name: Read the installed Go toolchain version
+  ansible.builtin.command: "{{ go_install_dir }}/bin/go env GOVERSION"
+  environment:
+    GOTOOLCHAIN: local
+  register: listener_go_installed
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: listener_local_binary | default('') | length == 0
+
+# A run limited by tags skips the common role, which installs Go. Building
+# with another release would miss the pinned toolchain and rebuild every run.
+- name: Require the pinned Go toolchain for source builds
+  ansible.builtin.assert:
+    that:
+      - listener_go_installed.stdout | default('') | trim == 'go' ~ go_version
+    fail_msg: >-
+      {{ go_install_dir }} holds {{ listener_go_installed.stdout | default('no Go') }},
+      not go{{ go_version }}. Run the common role first (the play without tags, or with the common tag).
+  when: listener_local_binary | default('') | length == 0
+
 - name: Read the Go version the existing binary was built with
   ansible.builtin.command: "{{ go_install_dir }}/bin/go version {{ listener_install_dir }}/shard-listener"
   register: listener_binary_go
   changed_when: false
+  check_mode: false
   failed_when: false
   when:
     - listener_local_binary | default('') | length == 0
@@ -94,7 +116,7 @@
     - >-
       not listener_binary_stat.stat.exists
       or (listener_force_build | default(false) | bool)
-      or ('go' ~ go_version) not in (listener_binary_go.stdout | default(''))
+      or (listener_binary_go.stdout | default('')).split() | last | default('') != 'go' ~ go_version
 
 - name: Set ownership on pushed/built binary
   ansible.builtin.file:
