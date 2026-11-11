@@ -35,6 +35,7 @@
     dest: "{{ listener_install_dir }}"
     version: "{{ listener_version }}"
     force: false
+  register: listener_clone
   when: listener_local_binary | default('') | length == 0
 
 - name: Push pre-built listener binary (skips git/build)
@@ -102,6 +103,7 @@
     - listener_binary_stat.stat.exists
 
 # A branch name stays the same while its commit moves, so the record carries both.
+# A dry run leaves the checkout alone: there the commit is the one the clone task predicts.
 - name: Read the checked-out commit
   ansible.builtin.command:
     cmd: git rev-parse HEAD
@@ -132,7 +134,8 @@
       {{ not listener_binary_stat.stat.exists
       or (listener_force_build | default(false) | bool)
       or (listener_binary_go.stdout | default('')).split() | last | default('') != 'go' ~ go_version
-      or (listener_built_ref.stdout | default('')) | trim != listener_version ~ ' ' ~ (listener_head.stdout | default('') | trim) }}
+      or (listener_built_ref.stdout | default('')) | trim != listener_version ~ ' ' ~
+      (listener_clone.after | default(listener_head.stdout | default(''), true) | trim) }}
   when: listener_local_binary | default('') | length == 0
 
 # Dropped first, so a run that stops between the build and the record rebuilds next time.
@@ -169,7 +172,7 @@
 
 - name: Record the release and commit the binary was built from
   ansible.builtin.copy:
-    content: "{{ listener_version }} {{ listener_head.stdout | default('') | trim }}\n"
+    content: "{{ listener_version }} {{ listener_clone.after | default(listener_head.stdout | default(''), true) | trim }}\n"
     dest: "{{ listener_install_dir }}/.built-ref"
     owner: "{{ listener_user }}"
     group: "{{ listener_group }}"
