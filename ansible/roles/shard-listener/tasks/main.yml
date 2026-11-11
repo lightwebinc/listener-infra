@@ -94,6 +94,16 @@
     - listener_local_binary | default('') | length == 0
     - listener_binary_stat.stat.exists
 
+- name: Read the release the existing binary was built from
+  ansible.builtin.command: "cat {{ listener_install_dir }}/.built-ref"
+  register: listener_built_ref
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when:
+    - listener_local_binary | default('') | length == 0
+    - listener_binary_stat.stat.exists
+
 - name: Build shard-listener binary
   ansible.builtin.command:
     # Folded scalar: the one-line form ran past the 160-char lint limit. Folding
@@ -115,12 +125,23 @@
   changed_when: true
   when:
     - listener_local_binary | default('') | length == 0
-    # A binary built with another Go release is rebuilt, so a toolchain move
-    # reaches a deployed node without listener_force_build.
+    # A binary built with another Go release, or from another release of the
+    # source, is rebuilt: a toolchain move or a version pin move reaches a
+    # deployed node without listener_force_build.
     - >-
       not listener_binary_stat.stat.exists
       or (listener_force_build | default(false) | bool)
       or (listener_binary_go.stdout | default('')).split() | last | default('') != 'go' ~ go_version
+      or (listener_built_ref.stdout | default('')) | trim != listener_version
+
+- name: Record the release the binary was built from
+  ansible.builtin.copy:
+    content: "{{ listener_version }}\n"
+    dest: "{{ listener_install_dir }}/.built-ref"
+    owner: "{{ listener_user }}"
+    group: "{{ listener_group }}"
+    mode: "0644"
+  when: listener_local_binary | default('') | length == 0
 
 - name: Set ownership on pushed/built binary
   ansible.builtin.file:
