@@ -35,7 +35,16 @@
     dest: "{{ listener_install_dir }}"
     version: "{{ listener_version }}"
     force: false
+  register: listener_clone
   when: listener_local_binary | default('') | length == 0
+
+# A pushed binary was not built here, so the build record goes first: a stop between the two
+# tasks then leaves no record beside a binary it does not describe.
+- name: Drop the build record for a pushed binary
+  ansible.builtin.file:
+    path: "{{ listener_install_dir }}/.built-ref"
+    state: absent
+  when: listener_local_binary | default('') | length > 0
 
 - name: Push pre-built listener binary (skips git/build)
   ansible.builtin.copy:
@@ -94,6 +103,51 @@
     - listener_local_binary | default('') | length == 0
     - listener_binary_stat.stat.exists
 
+# A branch name stays the same while its commit moves, so the record carries both.
+# A dry run leaves the checkout alone: there the commit is the one the clone task predicts.
+- name: Read the checked-out commit
+  ansible.builtin.command:
+    cmd: git rev-parse HEAD
+    chdir: "{{ listener_install_dir }}"
+  register: listener_head
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when: listener_local_binary | default('') | length == 0
+  tags: [skip_ansible_lint]
+
+- name: Read the release and commit the existing binary was built from
+  ansible.builtin.command: "cat {{ listener_install_dir }}/.built-ref"
+  register: listener_built_ref
+  changed_when: false
+  check_mode: false
+  failed_when: false
+  when:
+    - listener_local_binary | default('') | length == 0
+    - listener_binary_stat.stat.exists
+
+# A binary built with another Go release, or from another release or commit of
+# the source, is rebuilt: a toolchain move or a version pin move reaches a
+# deployed node without listener_force_build.
+- name: Decide whether the binary is rebuilt
+  ansible.builtin.set_fact:
+    listener_rebuild: >-
+      {{ not listener_binary_stat.stat.exists
+      or (listener_force_build | default(false) | bool)
+      or (listener_binary_go.stdout | default('')).split() | last | default('') != 'go' ~ go_version
+      or (listener_built_ref.stdout | default('')) | trim != listener_version ~ ' ' ~
+      (listener_clone.after | default(listener_head.stdout | default(''), true) | trim) }}
+  when: listener_local_binary | default('') | length == 0
+
+# Dropped first, so a run that stops between the build and the record rebuilds next time.
+- name: Drop the build record before a rebuild
+  ansible.builtin.file:
+    path: "{{ listener_install_dir }}/.built-ref"
+    state: absent
+  when:
+    - listener_local_binary | default('') | length == 0
+    - listener_rebuild | bool
+
 - name: Build shard-listener binary
   ansible.builtin.command:
     # Folded scalar: the one-line form ran past the 160-char lint limit. Folding
@@ -115,12 +169,16 @@
   changed_when: true
   when:
     - listener_local_binary | default('') | length == 0
-    # A binary built with another Go release is rebuilt, so a toolchain move
-    # reaches a deployed node without listener_force_build.
-    - >-
-      not listener_binary_stat.stat.exists
-      or (listener_force_build | default(false) | bool)
-      or (listener_binary_go.stdout | default('')).split() | last | default('') != 'go' ~ go_version
+    - listener_rebuild | bool
+
+- name: Record the release and commit the binary was built from
+  ansible.builtin.copy:
+    content: "{{ listener_version }} {{ listener_clone.after | default(listener_head.stdout | default(''), true) | trim }}\n"
+    dest: "{{ listener_install_dir }}/.built-ref"
+    owner: "{{ listener_user }}"
+    group: "{{ listener_group }}"
+    mode: "0644"
+  when: listener_local_binary | default('') | length == 0
 
 - name: Set ownership on pushed/built binary
   ansible.builtin.file:
