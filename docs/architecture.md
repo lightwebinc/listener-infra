@@ -82,7 +82,7 @@ the socket in the first place.
 - **Firewall** (nftables on Linux, pf on FreeBSD) enforces the
   multicast-fabric perimeter. See `security.md`.
 
-## How this repo is organised
+## How this repo is organized
 
 | Layer     | Location     | Purpose                                          |
 | --------- | ------------ | ------------------------------------------------ |

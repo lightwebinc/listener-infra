@@ -1,5 +1,6 @@
 # ansible-lint per-file ignores (one finding per line: <path> <rule>).
-# node_exporter_textfile_dir is deliberately the SAME name the node-exporter
-# role uses fleet-wide, so moving node_exporter's textfile directory is one
-# variable in every repo. A common_ prefix would split it into two names.
+# node_exporter_textfile_dir is deliberately named for node_exporter, not for
+# this role: whatever deploys node_exporter on the node can use the same
+# variable, so moving its textfile directory is one variable. A common_ prefix
+# would split it into two names.
 ansible/roles/common/defaults/main.yml var-naming[no-role-prefix]

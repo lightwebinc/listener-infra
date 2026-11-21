@@ -1,8 +1,8 @@
 ---
 # Disk hygiene
 # ------------------------------------------------------------
-# Fabric/edge nodes run an 8.7G root. Three things fill it, none of them fast
-# enough to notice and all of them unbounded:
+# A small root filesystem fills from three sources, none of them fast enough to
+# notice and all of them unbounded:
 #
 #   - the apt archive cache, which a dist-upgrade refills by ~1.4G per kernel bump
 #     and `autoclean` does NOT empty (it only drops .debs the repo no longer has);
@@ -10,12 +10,11 @@
 #   - /tmp/gopath + /tmp/gocache, ~780M left behind by the on-node Go builds in the
 #     shard-proxy / shard-listener / retry-endpoint roles.
 #
-# A single fleet-wide converge has been observed to halve the free space on every
-# node it touched and trip the disk-low alert on all of them at once. The
-# converge-time fixes (apt clean in os_update.yml, the Clean Go build caches
-# handler) only run when a converge runs, which is exactly the assumption that
-# failed, so the same reclaims also run on a timer, independent of anyone
-# deploying anything.
+# One converge across many nodes can halve the free space on every node it
+# touches and trip a disk-low alert on all of them at once. The converge-time
+# fixes (apt clean in os_update.yml, the Clean Go build caches handler) only run
+# when a converge runs, so the same reclaims also run on a timer, independent of
+# anyone deploying anything.
 common_disk_maintenance: true
 common_disk_maintenance_oncalendar: "daily"
 # Spread across nodes so a fabric's worth of timers does not fire in lockstep; the

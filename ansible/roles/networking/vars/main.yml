@@ -5,7 +5,7 @@
 # Ingress interface name (first entry when a list is given).
 networking_ingress_iface: "{{ ingress_iface if ingress_iface is string else ingress_iface[0] }}"
 
-# Resolved multicast route prefix: honour explicit override, else derive from scope.
+# Resolved multicast route prefix: honor explicit override, else derive from scope.
 networking_mc_route_prefix: "{{ mc_route_prefix if mc_route_prefix | length > 0 else networking_mc_scope_prefix_map[mc_scope] }}"
 
 # Map mc_scope keyword to the corresponding FF0x::/16 multicast prefix.

@@ -7,7 +7,7 @@
 #
 # Deliberately NOT done here:
 #   - `apt-get autoremove`. It is already part of the converge's dist-upgrade, and
-#     unattended kernel removal on a node whose forwarding behaviour depends on the
+#     unattended kernel removal on a node whose forwarding behavior depends on the
 #     running kernel (ip6gre multicast decap) is an operator decision, not a timer's.
 #   - anything under /usr/src or /lib/modules, for the same reason.
 #   - predictive/threshold logic. The reclaims are cheap and idempotent, so running

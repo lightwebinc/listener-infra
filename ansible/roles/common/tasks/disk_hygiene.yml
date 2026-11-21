@@ -1,7 +1,7 @@
 ---
 # Keeps the root filesystem bounded WITHOUT depending on a converge running.
-# See roles/common/defaults/main.yml for what fills these nodes and how a
-# fleet-wide disk-low alert became possible.
+# See roles/common/defaults/main.yml for what fills these nodes and why a
+# converge alone does not keep them clear.
 #
 # Two layers, deliberately overlapping:
 #   1. a declarative ceiling, so the journal cannot grow past it in the first place;

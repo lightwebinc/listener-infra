@@ -16,7 +16,7 @@ perf_tuning_disable_cstates: true
 perf_tuning_disable_irqbalance: true
 
 # Whether to apply the perf-tuning role at all. On by default; set false if
-# an operator wants stock OS behaviour.
+# an operator wants stock OS behavior.
 perf_tuning_enabled: true
 
 # When true, the role appends intel_idle.max_cstate=1 + processor.max_cstate=1

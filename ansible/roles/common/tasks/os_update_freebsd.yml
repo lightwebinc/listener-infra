@@ -12,7 +12,7 @@
 # pending-reboot state is reported instead, so an operator can schedule it.
 
 - name: Fetch base-system updates (FreeBSD)
-  # --not-running-from-cron suppresses the mail-if-no-tty behaviour; it does not
+  # --not-running-from-cron suppresses the mail-if-no-tty behavior; it does not
   # change what is fetched. failed_when:false because a host already current
   # exits non-zero on some releases: the install step below decides.
   ansible.builtin.command:
@@ -35,7 +35,7 @@
       'No updates are available to install'
       not in ((common_fbsd_install.stdout | default('')) + (common_fbsd_install.stderr | default('')))
 
-- name: Update the package catalogue (FreeBSD)
+- name: Update the package catalog (FreeBSD)
   ansible.builtin.command:
     cmd: pkg update -q
   changed_when: false
