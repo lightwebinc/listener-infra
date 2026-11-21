@@ -1,50 +1,56 @@
 # Copy this file to terraform.tfvars and fill in your values.
 
-aws_region   = "us-east-1"
-name_prefix  = "shard-listener"
-environment  = "production"
-
-vpc_cidr           = "10.10.0.0/16"
+allocate_eips      = false
 availability_zones = ["us-east-1a", "us-east-1b"]
-
-instance_count  = 2
-instance_type   = "t3.medium"
-key_name        = "my-ec2-keypair"
-ssh_private_key = "~/.ssh/id_ed25519"
-
-ssh_allowed_cidrs     = ["0.0.0.0/0"]   # Tighten for production
-metrics_allowed_cidrs = ["0.0.0.0/0"]
-
-# Fabric sources (multicast senders): fabric is IPv6-only; tighten to your fabric CIDRs
-fabric_source_cidrs_v6 = ["::/0"]
-
-allocate_eips = false
-
-# Listener
-listen_port     = 9001
-shard_bits      = 2
-ingress_mode    = "ethernet"
-ingress_iface   = "eth0"
-egress_addr     = "10.0.1.100:9100"
-egress_proto    = "udp"
-retry_endpoints = ""   # e.g. "10.0.2.10:9300,10.0.2.11:9300"
-
-# Host-level multicast-fabric perimeter firewall (default on)
-enable_firewall = true
-mgmt_cidrs_v6   = []
-
-# GRE6 tunnel (set ingress_mode = "gre" to use)
-# gre_remote_ip6 = "2001:db8:feed::1"
+aws_region         = "us-east-1"
 
 # BGP (set enable_bgp = true to use)
 # Listener BGP advertises the listener's own prefix INTO the fabric only.
-enable_bgp   = false
 bgp_daemon   = "bird2"
-bgp_prefix   = []
-bgp_vip      = ""
-bgp_prefix6  = []
-bgp_vip6     = ""
 bgp_local_as = 65002
 bgp_peer_as  = 65000
 bgp_peer_ip  = ""
 bgp_peer_ip6 = ""
+bgp_prefix   = []
+bgp_prefix6  = []
+bgp_vip      = ""
+bgp_vip6     = ""
+
+# Listener
+egress_addr  = "10.0.1.100:9100"
+egress_proto = "udp"
+
+enable_bgp = false
+
+# Host-level multicast-fabric perimeter firewall (default on)
+enable_firewall = true
+
+environment = "production"
+
+# Fabric sources (multicast senders): fabric is IPv6-only; tighten to your fabric CIDRs
+fabric_source_cidrs_v6 = ["::/0"]
+
+# GRE6 tunnel (set ingress_mode = "gre" to use)
+# gre_remote_ip6 = "2001:db8:feed::1"
+
+ingress_iface = "eth0"
+ingress_mode  = "ethernet"
+
+instance_count = 2
+instance_type  = "t3.medium"
+key_name       = "my-ec2-keypair"
+
+listen_port = 9001
+
+metrics_allowed_cidrs = ["0.0.0.0/0"]
+
+mgmt_cidrs_v6 = []
+
+name_prefix = "shard-listener"
+
+retry_endpoints = "" # e.g. "10.0.2.10:9300,10.0.2.11:9300"
+shard_bits      = 2
+
+ssh_allowed_cidrs = ["0.0.0.0/0"] # Tighten for production
+ssh_private_key   = "~/.ssh/id_ed25519"
+vpc_cidr          = "10.10.0.0/16"
