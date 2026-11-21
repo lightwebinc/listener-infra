@@ -49,8 +49,8 @@
     state: latest
   register: common_fbsd_pkg
 
-# Mirrors the Debian `apt clean`: a fabric-wide NodeDiskLow came from letting the
-# package cache accumulate after an upgrade, and these roots are no larger.
+# Empties the package cache after an upgrade: it would otherwise hold every
+# package just fetched, and these roots are small.
 - name: Drop the package cache (FreeBSD)
   ansible.builtin.command:
     cmd: pkg clean -ay

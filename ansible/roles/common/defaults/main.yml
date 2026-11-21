@@ -11,10 +11,11 @@
 #     shard-proxy / shard-listener / retry-endpoint roles.
 #
 # One converge across many nodes can halve the free space on every node it
-# touches and trip a disk-low alert on all of them at once. The converge-time
-# fixes (apt clean in os_update.yml, the Clean Go build caches handler) only run
-# when a converge runs, so the same reclaims also run on a timer, independent of
-# anyone deploying anything.
+# touches and trip a disk-low alert on all of them at once. A converge reclaims
+# only part of it (the Clean Go build caches handler, and `pkg clean` on FreeBSD;
+# on Debian its `autoclean` keeps the apt archive), and only when a converge
+# runs, so the reclaims run on a timer, independent of anyone deploying
+# anything; the timer's `apt-get clean` is what empties the apt archive.
 common_disk_maintenance: true
 common_disk_maintenance_oncalendar: "daily"
 # Spread across nodes so a fabric's worth of timers does not fire in lockstep; the

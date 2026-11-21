@@ -7,9 +7,10 @@
 #   1. a declarative ceiling, so the journal cannot grow past it in the first place;
 #   2. a timer that performs the reclaims the converge does, so a fabric that is not
 #      being deployed to still holds flat free space.
-# The converge-time fixes (apt clean in os_update.yml, the Clean Go build caches
-# handler) stay where they are: they keep a single converge from being the thing
-# that fills the disk, which the timer would only clean up after the fact.
+# The converge-time reclaims (the Clean Go build caches handler, and `pkg clean`
+# on FreeBSD) stay where they are: they keep a single converge from being the
+# thing that fills the disk, which the timer would only clean up after the fact.
+# On Debian the apt archive is emptied by the timer's `apt-get clean` alone.
 
 - name: Cap journald on-disk size
   block:
