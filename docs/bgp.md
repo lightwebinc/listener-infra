@@ -11,7 +11,7 @@ trees toward the node in L3 fabrics.
 *receives* the retry endpoint's unicast replies: a retransmit of the
 missing frame plus a small ACK/MISS/THROTTLED control response. Those
 replies are addressed to the NACK's source address, so that address must
-be routable from the retry endpoints. On tunnelled fabrics the kernel's
+be routable from the retry endpoints. On tunneled fabrics the kernel's
 per-route source pick (e.g. a point-to-point tunnel inner address) can
 misroute the reply off the tunnel; a routable unicast identity avoids
 this.
