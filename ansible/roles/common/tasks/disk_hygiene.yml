@@ -1,15 +1,17 @@
 ---
 # Keeps the root filesystem bounded WITHOUT depending on a converge running.
-# See roles/common/defaults/main.yml for what fills these nodes and how a
-# fleet-wide disk-low alert became possible.
+# See roles/common/defaults/main.yml for what fills these nodes and why a
+# converge alone does not keep them clear.
 #
 # Two layers, deliberately overlapping:
 #   1. a declarative ceiling, so the journal cannot grow past it in the first place;
 #   2. a timer that performs the reclaims the converge does, so a fabric that is not
 #      being deployed to still holds flat free space.
-# The converge-time fixes (apt clean in os_update.yml, the Clean Go build caches
-# handler) stay where they are: they keep a single converge from being the thing
-# that fills the disk, which the timer would only clean up after the fact.
+# The converge-time reclaims (the Clean Go build caches handler, and `pkg clean`
+# on FreeBSD) stay where they are: they reduce what a single converge leaves on
+# the disk, which the timer would only clean up after the fact. They do not
+# prevent a full disk: on Debian a dist-upgrade can refill the apt archive
+# before the timer's `apt-get clean`, the only step that empties it, runs.
 
 - name: Cap journald on-disk size
   block:
