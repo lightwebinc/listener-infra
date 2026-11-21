@@ -1,5 +1,29 @@
 # Copy this file to terraform.tfvars and fill in your values.
 
+# BGP (set enable_bgp = true to use)
+# Listener BGP advertises the listener's own unicast prefix INTO the fabric so
+# MLD/PIM can build multicast distribution trees toward it. NACK is send-only,
+# so no reverse-path advertisement is required.
+bgp_daemon   = "bird2"
+bgp_local_as = 65002
+bgp_peer_as  = 65000
+bgp_peer_ip  = ""
+bgp_peer_ip6 = ""
+bgp_prefix   = []        # e.g. ["203.0.113.50/32"]
+bgp_prefix6  = []        # e.g. ["2001:db8::50/128"]
+bgp_vip      = ""        # e.g. "203.0.113.50"
+bgp_vip6     = ""        # e.g. "2001:db8::50"
+
+egress_proto    = "udp"
+
+enable_bgp   = false
+
+# Multicast-fabric perimeter firewall (default on)
+enable_firewall = true
+
+# GRE6 tunnel (set ingress_mode = "gre" to use)
+# gre_remote_ip6 = "2001:db8:feed::1"
+
 hosts = [
   {
     name        = "listener-01"
@@ -21,31 +45,11 @@ hosts = [
   },
 ]
 
-shard_bits      = 2
-ingress_mode    = "ethernet"
 ingress_iface   = "eth0"
-egress_proto    = "udp"
-retry_endpoints = "10.0.2.10:9300,10.0.2.11:9300"
+ingress_mode    = "ethernet"
 
-# Multicast-fabric perimeter firewall (default on)
-enable_firewall = true
 mgmt_cidrs_v4   = ["10.0.0.0/8"]
 mgmt_cidrs_v6   = []
 
-# GRE6 tunnel (set ingress_mode = "gre" to use)
-# gre_remote_ip6 = "2001:db8:feed::1"
-
-# BGP (set enable_bgp = true to use)
-# Listener BGP advertises the listener's own unicast prefix INTO the fabric so
-# MLD/PIM can build multicast distribution trees toward it. NACK is send-only,
-# so no reverse-path advertisement is required.
-enable_bgp   = false
-bgp_daemon   = "bird2"
-bgp_prefix   = []        # e.g. ["203.0.113.50/32"]
-bgp_vip      = ""        # e.g. "203.0.113.50"
-bgp_prefix6  = []        # e.g. ["2001:db8::50/128"]
-bgp_vip6     = ""        # e.g. "2001:db8::50"
-bgp_local_as = 65002
-bgp_peer_as  = 65000
-bgp_peer_ip  = ""
-bgp_peer_ip6 = ""
+retry_endpoints = "10.0.2.10:9300,10.0.2.11:9300"
+shard_bits      = 2
