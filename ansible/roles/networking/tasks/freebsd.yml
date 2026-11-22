@@ -84,10 +84,10 @@
     value: bsl_mcast
     state: value_present
 
-# Compared on every run, not only after a change: gif0 can be missing, or run
-# another tunnel or inner address, with nothing left to change (destroyed or
-# reconfigured by hand, or a converge stopped before its restart), and the live
-# route below needs it. gif_status (this role's library/) compares by value.
+# Compared on every run, not only after a change: gif0 can be missing, down, or
+# run another tunnel or inner address, with nothing left to change (destroyed,
+# downed or reconfigured by hand, or a converge stopped before its restart), and
+# the live route below needs it. gif_status (this role's library/) compares by value.
 - name: Check gif0 against its configuration (GRE, FreeBSD)
   gif_status:
     name: gif0
@@ -151,7 +151,7 @@
   ansible.builtin.assert:
     that: networking_gif0_after.matches
     fail_msg: >-
-      gif0 does not run the tunnel and inner address rc.conf gives it after
+      gif0 is not up with the tunnel and inner address rc.conf gives it after
       `service netif restart gif0`, which exits 0 even when the ifconfig it runs
       fails (a tunnel address pair another gif interface holds, for one). Check
       gre_outer_proto and its endpoints, gre_inner_ipv6. Wanted: tunnel {{ networking_gre_tunnel | join(' --> ') }}, inet6
@@ -185,7 +185,13 @@
       - "{{ networking_ingress_iface }}"
   register: networking_mc_route_result
   changed_when: networking_mc_route_result.rc == 0
-  failed_when: networking_mc_route_result.rc != 0 and 'File exists' not in networking_mc_route_result.stderr
+  # route(8) reports an existing route on stderr ("message indicates error: File
+  # exists" over netlink, "writing to routing socket: File exists" over rtsock)
+  # and on stdout ("... route already in table"); any other error stays fatal.
+  failed_when: >-
+    networking_mc_route_result.rc != 0
+    and 'File exists' not in networking_mc_route_result.stderr
+    and 'already in table' not in networking_mc_route_result.stdout
 
 # A route for the prefix can already exist through another interface (ingress_iface
 # or ingress_mode changed while the old interface stays up): move it here.

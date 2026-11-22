@@ -113,7 +113,7 @@ On FreeBSD the role edits `/etc/rc.conf` directly:
   `/var/db/shard-listener-netif.json`, so a converge stopped between its
   rc.conf writes and the restart is finished by the next one; the first
   converge on a host without that record restarts the interface once. Every
-  converge also compares the running `gif0` with its configuration (tunnel
+  converge also compares the running `gif0` with its configuration (up, tunnel
   endpoints and inner address, by value) and restarts it when they differ;
   after a restart it stops with an error if they still differ, because
   `service netif restart` exits 0 even when an `ifconfig` it runs fails
