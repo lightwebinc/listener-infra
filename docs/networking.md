@@ -113,17 +113,24 @@ On FreeBSD the role edits `/etc/rc.conf` directly:
 - `ipv6_route_bsl_mcast` for the multicast route, with `bsl_mcast` added to
   `ipv6_static_routes` (names already listed stay) so a boot installs it
 - Restart of the changed interface only, by name (`service netif restart gif0`
-  in GRE mode, which creates it; the ingress interface in ethernet mode; `lo0`
-  for a VIP change), when its configuration above changed or `gif0` does not
-  run it: a converge that changes nothing leaves `gif0`, the listener bound to
-  it and every other interface alone. What each restart applied is recorded in
+  in GRE mode, which creates it; the ingress interface in ethernet mode), when
+  its configuration above changed or `gif0` does not run it: a converge that
+  changes nothing leaves `gif0`, the listener bound to it and every other
+  interface alone. What each converge applied is recorded in
   `/var/db/shard-listener-netif.json`, so a converge stopped between its
-  rc.conf writes and the restart is finished by the next one; the first
-  converge on a host without that record restarts the interface once. Every
+  rc.conf writes and the restart is finished by the next one. A host without
+  that record (the first converge with this role) restarts only an interface
+  that fails its live check (`gif0` not up with its tunnel and inner address;
+  the ingress interface down, or its rc.conf lines changed by this converge),
+  so a node an earlier version set up keeps running untouched. Every
   converge also compares the running `gif0` with its configuration (up, tunnel
   endpoints and inner address, by value) and restarts it when they differ;
   after a restart it stops with an error if they still differ, because
   `service netif restart` exits 0 even when an `ifconfig` it runs fails
+- The BGP VIPs, changed live on `lo0`, which is never restarted: a missing VIP
+  is added (`ifconfig lo0 inet VIP/32 alias`, `ifconfig lo0 inet6 VIP6
+  prefixlen 128 alias`), one the role no longer gives is removed (`-alias`)
+  with its rc.conf line, and 127.0.0.1, ::1 and the other VIP stay
 - The live multicast route, added after the restart; a route for the prefix
   that already goes through another interface (`ingress_iface` or
   `ingress_mode` changed while the old interface stays up) is moved there with

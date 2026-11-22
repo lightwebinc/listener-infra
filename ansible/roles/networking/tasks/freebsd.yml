@@ -1,7 +1,7 @@
 ---
-# Every task that changes interface configuration registers its result: only the
-# interfaces whose configuration changed are restarted (see "Restart changed
-# interfaces" below).
+# Every task that changes interface configuration registers its result: only an
+# interface whose configuration changed or that fails its live check is restarted,
+# by name, and lo0 never is (see "Restart changed interfaces" below).
 - name: Enable IPv6 in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
     path: /etc/rc.conf
@@ -52,13 +52,30 @@
   when: ingress_mode == 'gre'
   register: networking_rc_clone
 
+# What the last successful converge applied, per interface (written at the end).
+# A run that wrote rc.conf and stopped before its restart leaves the running
+# interface behind rc.conf with nothing left to change; the record still differs
+# from networking_netif_desired, so the next run restarts it. A host without the
+# record, the first converge with this role, has nothing to compare: it restarts
+# only an interface that fails its live check below, and the record starts from
+# what the host then runs.
+- name: Read the applied interface state (FreeBSD)
+  ansible.builtin.slurp:
+    src: "{{ networking_netif_state_file }}"
+  register: networking_netif_applied
+  failed_when: false
+
+- name: Collect the applied interface state (FreeBSD)
+  ansible.builtin.set_fact:
+    networking_netif_seed: "{{ networking_netif_applied.content is not defined }}"
+    networking_netif_record: "{{ networking_netif_applied.content | default('e30=') | b64decode | from_json }}"
+
 - name: Configure IPv4 BGP loopback VIP in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
     path: /etc/rc.conf
     regexp: '^ifconfig_lo0_alias0='
     line: 'ifconfig_lo0_alias0="inet {{ bgp_vip }} netmask 255.255.255.255"'
   when: enable_bgp | bool and bgp_vip | length > 0
-  register: networking_rc_vip4
 
 - name: Configure IPv6 BGP loopback VIP in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
@@ -66,7 +83,18 @@
     regexp: '^ifconfig_lo0_alias1='
     line: 'ifconfig_lo0_alias1="inet6 {{ bgp_vip6 }} prefixlen 128"'
   when: enable_bgp | bool and bgp_vip6 | length > 0
-  register: networking_rc_vip6
+
+# A VIP the last converge applied (it is in the record) that is no longer wanted:
+# its line goes, so a boot does not bring it back. Only the exact line this role
+# writes is removed, so an ifconfig_lo0_aliasN an operator keeps stays.
+- name: Remove BGP VIP lines that are no longer wanted (FreeBSD)
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    line: >-
+      {{ ('ifconfig_lo0_alias1="inet6 ' ~ item ~ ' prefixlen 128"') if ':' in item
+         else ('ifconfig_lo0_alias0="inet ' ~ item ~ ' netmask 255.255.255.255"') }}
+    state: absent
+  loop: "{{ networking_vips_recorded | difference(networking_vips) }}"
 
 - name: Add persistent multicast route for ingress interface in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
@@ -100,27 +128,35 @@
   register: networking_gif0_probe
   when: ingress_mode == 'gre'
 
-# What the last successful restart applied, per interface (written below). A run
-# that wrote rc.conf and stopped before the restart leaves the running interface
-# behind rc.conf with nothing left to change; the record still differs from
-# networking_netif_desired, so the next run restarts it.
-- name: Read the applied interface state (FreeBSD)
-  ansible.builtin.slurp:
-    src: "{{ networking_netif_state_file }}"
-  register: networking_netif_applied
+# The ethernet interface's live check: it is up. Its DHCP and SLAAC settings cannot
+# be read back from ifconfig, so a change to its rc.conf lines in this run
+# restarts it as well (below).
+- name: Check the ingress interface is up (ethernet, FreeBSD)
+  ansible.builtin.command:
+    argv: [ifconfig, "{{ networking_data_iface }}"]
+  register: networking_eth_probe
+  changed_when: false
   failed_when: false
+  check_mode: false
+  when: ingress_mode == 'ethernet'
 
-# Only the interfaces whose configuration changed, is not applied yet, or (gif0)
-# is not running it, each by name. A bare `service netif restart` would also
-# destroy and re-create every other listed clone, an operator's epair0 under a
-# running jail for one, and bounce the management interface. Restarting gif0
-# destroys and re-creates it, which drops every route through it, so the live
-# route goes in after this. The route line and its ipv6_static_routes entry above
-# are boot-time records that need no restart. The command, not the service
-# module: on FreeBSD that module puts `arguments` before the script name
-# (`service gif0 netif restart`). A task, not a handler: flushing handlers here
-# would also run the service roles' pending restarts first, under a gif0 about
-# to be destroyed, and an end-of-play handler would run after the live route.
+# Only the interfaces whose configuration changed, is not applied yet, or that fail
+# their live check, each by name: an entry that differs from the record (once
+# there is one), gif0 not up with its tunnel and inner address, the ethernet
+# interface down, or its rc.conf lines (or the IPv6 base lines) changed in this
+# run. Never lo0: `service netif restart lo0` removes every address on it,
+# 127.0.0.1, ::1 and the VIPs BGP sessions are sourced from included
+# (network.subr ipv4_down, ipv6_down); the VIPs change live below. A bare
+# `service netif restart` would also destroy and re-create every other listed
+# clone, an operator's epair0 under a running jail for one, and bounce the
+# management interface. Restarting gif0 destroys and re-creates it, which drops
+# every route through it, so the live route goes in after this. The route line
+# and its ipv6_static_routes entry above are boot-time records that need no
+# restart. The command, not the service module: on FreeBSD that module puts
+# `arguments` before the script name (`service gif0 netif restart`). A task, not a
+# handler: flushing handlers here would also run the service roles' pending
+# restarts first, under a gif0 about to be destroyed, and an end-of-play handler
+# would run after the live route.
 - name: Restart changed interfaces (FreeBSD)
   ansible.builtin.command:
     argv: [service, netif, restart, "{{ item }}"]
@@ -128,17 +164,18 @@
   loop: "{{ networking_netif_restart }}"
   vars:
     networking_netif_restart: >-
-      {{ (((networking_netif_desired.items() | map('join', '|') | list)
-           | difference((networking_netif_applied.content | default('e30=') | b64decode | from_json).items()
-                        | map('join', '|') | list)
-           | map('split', '|') | map('first') | list)
+      {{ ((((networking_netif_desired.items() | map('join', '|') | list)
+            | difference(networking_netif_record.items() | map('join', '|') | list)
+            | map('split', '|') | map('first') | list)
+           if not (networking_netif_seed | bool) else [])
           + ([networking_data_iface]
              if (networking_rc_base is changed or networking_rc_iface is changed
-                 or networking_rc_gre is changed or networking_rc_clone is changed
-                 or not (networking_gif0_probe.matches | default(true)))
-             else [])
-          + (['lo0'] if (networking_rc_vip4 is changed or networking_rc_vip6 is changed) else []))
-         | unique }}
+                 or not (networking_gif0_probe.matches | default(true))
+                 or (networking_eth_probe is not skipped
+                     and (networking_eth_probe.rc != 0
+                          or networking_eth_probe.stdout is not search('flags=[0-9a-f]+<([^>]*,)?UP[,>]'))))
+             else []))
+         | reject('equalto', 'lo0') | unique }}
 
 # `service netif restart gif0` exits 0 even when an ifconfig it runs fails
 # (network.subr ifconfig_up ignores its status), so a tunnel that did not apply
@@ -165,8 +202,18 @@
     quiet: true
   when: ingress_mode == 'gre' and not ansible_check_mode
 
-# After the restarts and the check: a restart that failed or never ran, or a
-# tunnel that did not apply, keeps the old record.
+# The BGP VIPs, live, one alias at a time: each wanted one lo0 lacks is added, then
+# each one the record holds that is no longer wanted is removed. 127.0.0.1, ::1
+# and every other address on lo0 stay. loopback_vips (this role's library/)
+# compares by value and fails unless lo0 then carries exactly what is wanted.
+- name: Apply the BGP VIPs on lo0 (FreeBSD)
+  loopback_vips:
+    name: lo0
+    present: "{{ networking_vips }}"
+    absent: "{{ networking_vips_recorded }}"
+
+# After the restarts and the checks: a restart that failed or never ran, a tunnel
+# that did not apply or a VIP that could not be set keeps the old record.
 - name: Record the applied interface state (FreeBSD)
   ansible.builtin.copy:
     dest: "{{ networking_netif_state_file }}"

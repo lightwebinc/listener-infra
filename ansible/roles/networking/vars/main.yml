@@ -15,8 +15,9 @@ networking_gre_tunnel: >-
   {{ [gre_local_ip4, gre_remote_ip4] if gre_outer_proto == 'ipv4' else [gre_local_ip6, gre_remote_ip6] }}
 
 # FreeBSD: per interface, the settings this role writes to rc.conf for it. A
-# restart applies them, and networking_netif_state_file records what the last
-# successful restart applied: an interface whose entry differs is restarted.
+# restart applies them (lo0's VIPs are applied live), and networking_netif_state_file
+# records what the last successful converge applied: an interface whose entry
+# differs is restarted, lo0 never.
 networking_netif_desired: >-
   {{ {networking_data_iface:
         ('gre ' ~ (networking_gre_tunnel | join(' ')) ~ ' ' ~ gre_inner_ipv6)
@@ -25,6 +26,15 @@ networking_netif_desired: >-
      | combine({'lo0': 'vip ' ~ bgp_vip ~ ' ' ~ bgp_vip6}
                if (enable_bgp | bool and (bgp_vip ~ bgp_vip6) | length > 0) else {}) }}
 networking_netif_state_file: /var/db/shard-listener-netif.json
+
+# FreeBSD: the BGP VIPs lo0 carries. They are added and removed live, one alias at
+# a time (loopback_vips, this role's library/); lo0 itself is never restarted.
+networking_vips: >-
+  {{ ([bgp_vip] if (enable_bgp | bool and bgp_vip | length > 0) else [])
+     + ([bgp_vip6] if (enable_bgp | bool and bgp_vip6 | length > 0) else []) }}
+# The VIPs the last converge applied: lo0's record entry is "vip <bgp_vip> <bgp_vip6>"
+# (networking_netif_record is read at run time).
+networking_vips_recorded: "{{ (networking_netif_record.lo0 | default('')).split()[1:] }}"
 
 # FreeBSD: the multicast route resolves to ff02::/16, which rc.d/routing reserves
 # with a reject route at every boot ("ff02::/16 ::1 -reject"), so no route for it
