@@ -84,7 +84,7 @@ conjunction with `mc_group_id`).
 `link` is refused on FreeBSD hosts: FreeBSD reserves `ff02::/16` (at boot
 `rc.d/routing` installs `ff02::/16 ::1 -reject`), so a link-scope multicast
 route can never be installed there, and `site.yml` fails before any role
-changes the host. The same applies to `mc_route_prefix: "ff02::/16"`.
+changes the host. The same applies to an `mc_route_prefix` of `ff02::/16` in any spelling.
 
 ## BGP VIP
 
@@ -105,10 +105,12 @@ On FreeBSD the role edits `/etc/rc.conf` directly:
 - `ifconfig_lo0_alias0` / `alias1` for BGP VIPs
 - `ipv6_route_bsl_mcast` for the multicast route, with `bsl_mcast` added to
   `ipv6_static_routes` (names already listed stay) so a boot installs it
-- Restart via `service netif restart`, which creates `gif0` in GRE mode, only
-  when the interface configuration above changed: a converge that changes
-  nothing leaves `gif0`, and the listener bound to it, alone. The live
-  multicast route is added after the restart
+- Restart of the changed interface only, by name (`service netif restart gif0`
+  in GRE mode, which creates it; the ingress interface in ethernet mode; `lo0`
+  for a VIP change), when its configuration above changed or `gif0` is
+  missing: a converge that changes nothing leaves `gif0`, the listener bound to
+  it and every other interface alone. The live multicast route is added after
+  the restart
 
 ## Verifying multicast receive
 

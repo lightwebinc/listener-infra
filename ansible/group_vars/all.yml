@@ -114,8 +114,9 @@ subtree_data_enabled: false
 manifest_consumer_enabled: false
 shard_include_from_manifest: false
 
-# Optional binary flags. Each renders only when set: "" (or false) passes
-# nothing, so the binary default applies and an older binary keeps working.
+# Optional binary flags. Each renders only when set: "", null or false passes
+# nothing (a number, 0 included, renders), so the binary default applies and an
+# older binary keeps working.
 beef_max_object_bytes: ""       # BEEF_MAX_OBJECT_BYTES: per-object bound for BEEF reassembly, at least the largest object any ingress admits (default 1048576)
 bridging_window: ""             # BRIDGING_WINDOW: reserved for the live-resharding bridging mode; parsed, unused
 control_group_compat: ""        # CONTROL_GROUP_COMPAT: asm-only | both (default) | derived; BRC-129 control-group prefix during the FF0x to FF3x move

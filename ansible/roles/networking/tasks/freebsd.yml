@@ -1,6 +1,7 @@
 ---
-# Every task that changes interface configuration registers its result: netif is
-# restarted only when one of them changed (see "Restart networking" below).
+# Every task that changes interface configuration registers its result: only the
+# interfaces whose configuration changed are restarted (see "Restart changed
+# interfaces" below).
 - name: Enable IPv6 in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
     path: /etc/rc.conf
@@ -86,20 +87,39 @@
     value: bsl_mcast
     state: value_present
 
-# Only when interface configuration changed. A restart destroys gif0 (GRE mode)
-# under the listener that is already bound to it, and re-creates it; the route
-# line and its ipv6_static_routes entry above are boot-time records that need no
-# restart. A task, not a handler: flushing handlers here would also run the
-# service roles' pending restarts first, under a gif0 about to be destroyed, and
-# an end-of-play handler would run after the live route below, flushing it.
-- name: Restart networking (FreeBSD)
+# Checked on every run, not only after a change: a run that wrote the lines
+# above and stopped before restarting netif leaves gif0 absent with nothing left
+# to change, and the live route below needs it.
+- name: Check that gif0 exists (GRE, FreeBSD)
+  ansible.builtin.command:
+    argv: [ifconfig, gif0]
+  register: networking_gif0_probe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: ingress_mode == 'gre'
+
+# Only the interfaces whose configuration changed (and gif0 when it is missing),
+# each by name. A bare `service netif restart` would also destroy and re-create
+# every other listed clone, an operator's epair0 under a running jail for one,
+# and bounce the management interface. Restarting gif0 destroys and re-creates
+# it, which drops every route through it, so the live route goes in after this.
+# The route line and its ipv6_static_routes entry above are boot-time records
+# that need no restart. A task, not a handler: flushing handlers here would also
+# run the service roles' pending restarts first, under a gif0 about to be
+# destroyed, and an end-of-play handler would run after the live route below.
+- name: Restart changed interfaces (FreeBSD)
   ansible.builtin.service:
     name: netif
     state: restarted
-  when: >-
-    networking_rc_base is changed or networking_rc_iface is changed
-    or networking_rc_gre is changed or networking_rc_clone is changed
-    or networking_rc_vip4 is changed or networking_rc_vip6 is changed
+    arguments: "{{ item }}"
+  loop: >-
+    {{ ([networking_data_iface]
+        if (networking_rc_base is changed or networking_rc_iface is changed
+            or networking_rc_gre is changed or networking_rc_clone is changed
+            or (networking_gif0_probe.rc | default(0)) != 0)
+        else [])
+       + (['lo0'] if (networking_rc_vip4 is changed or networking_rc_vip6 is changed) else []) }}
 
 # After the restart, which creates gif0 in GRE mode and, when gif0 existed,
 # destroyed it first and dropped every route through it.
