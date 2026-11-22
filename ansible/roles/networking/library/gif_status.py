@@ -60,7 +60,18 @@ INET6 = re.compile(r"^\s*inet6 (\S+) prefixlen (\d+)")
 
 
 def address(text):
+    """An inner address: its scope zone, if any, is dropped."""
     return ipaddress.ip_address(text.split("%", 1)[0])
+
+
+def endpoint(text):
+    """A tunnel endpoint keeps its zone: fe80::1%em0 and fe80::1%em1 are different links."""
+    try:
+        return ipaddress.ip_address(text)
+    except ValueError:
+        if "%" not in text:
+            raise
+        return address(text)  # Python before 3.9 has no scoped IPv6Address
 
 
 def main():
@@ -74,7 +85,7 @@ def main():
     )
     params = module.params
     try:
-        want_tunnel = [address(a) for a in params["tunnel"]]
+        want_tunnel = [endpoint(a) for a in params["tunnel"]]
         if "/" in params["inet6"]:
             want_inner = ipaddress.ip_interface(params["inet6"])
         else:
@@ -94,7 +105,7 @@ def main():
                 up = "UP" in match.group(1).split(",")
             match = TUNNEL.match(line)
             if match:
-                tunnel = [address(match.group(1)), address(match.group(2))]
+                tunnel = [endpoint(match.group(1)), endpoint(match.group(2))]
             # Every address, link-local included: a configured link-local inner
             # address matches its scoped line, and the automatic one never equals
             # a configured global address.
