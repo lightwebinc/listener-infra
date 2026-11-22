@@ -9,6 +9,19 @@ networking_ingress_iface: "{{ ingress_iface if ingress_iface is string else ingr
 # GRE mode always names the tunnel gif0.
 networking_data_iface: "{{ 'gif0' if ingress_mode == 'gre' else networking_ingress_iface }}"
 
+# FreeBSD: per interface, the settings this role writes to rc.conf for it. A
+# restart applies them, and networking_netif_state_file records what the last
+# successful restart applied: an interface whose entry differs is restarted.
+networking_netif_desired: >-
+  {{ {networking_data_iface:
+        ('gre ' ~ ([gre_outer_proto, gre_local_ip4, gre_remote_ip4, gre_local_ip6, gre_remote_ip6,
+                    gre_inner_ipv6] | join(' ')))
+        if ingress_mode == 'gre'
+        else ('ethernet ' ~ ((ingress_dhcp4 | default(true)) | bool | ternary('DHCP', 'up')))}
+     | combine({'lo0': 'vip ' ~ bgp_vip ~ ' ' ~ bgp_vip6}
+               if (enable_bgp | bool and (bgp_vip ~ bgp_vip6) | length > 0) else {}) }}
+networking_netif_state_file: /var/db/shard-listener-netif.json
+
 # Resolved multicast route prefix: honor explicit override, else derive from scope.
 networking_mc_route_prefix: "{{ mc_route_prefix if mc_route_prefix | length > 0 else networking_mc_scope_prefix_map[mc_scope] }}"
 
