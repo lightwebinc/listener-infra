@@ -34,10 +34,7 @@
     path: /etc/rc.conf
     marker: "# {mark} shard-listener GRE tunnel"
     block: |
-      {% set tun = (gre_outer_proto == 'ipv4')
-                   | ternary(gre_local_ip4 ~ ' ' ~ gre_remote_ip4,
-                             gre_local_ip6 ~ ' ' ~ gre_remote_ip6) -%}
-      ifconfig_gif0="tunnel {{ tun }}"
+      ifconfig_gif0="tunnel {{ networking_gre_tunnel | join(' ') }}"
       ifconfig_gif0_ipv6="inet6 {{ gre_inner_ipv6 }}"
   when: ingress_mode == 'gre'
   register: networking_rc_gre
@@ -87,16 +84,16 @@
     value: bsl_mcast
     state: value_present
 
-# Checked on every run, not only after a change: gif0 can be missing with
-# nothing left to change (destroyed by hand, or a converge stopped before its
-# restart), and the live route below needs it.
-- name: Check that gif0 exists (GRE, FreeBSD)
-  ansible.builtin.command:
-    argv: [ifconfig, gif0]
+# Compared on every run, not only after a change: gif0 can be missing, or run
+# another tunnel or inner address, with nothing left to change (destroyed or
+# reconfigured by hand, or a converge stopped before its restart), and the live
+# route below needs it. gif_status (this role's library/) compares by value.
+- name: Check gif0 against its configuration (GRE, FreeBSD)
+  gif_status:
+    name: gif0
+    tunnel: "{{ networking_gre_tunnel }}"
+    inet6: "{{ gre_inner_ipv6 }}"
   register: networking_gif0_probe
-  changed_when: false
-  failed_when: false
-  check_mode: false
   when: ingress_mode == 'gre'
 
 # What the last successful restart applied, per interface (written below). A run
@@ -110,16 +107,16 @@
   failed_when: false
 
 # Only the interfaces whose configuration changed, is not applied yet, or (gif0)
-# is missing, each by name. A bare `service netif restart` would also destroy and
-# re-create every other listed clone, an operator's epair0 under a running jail
-# for one, and bounce the management interface. Restarting gif0 destroys and
-# re-creates it, which drops every route through it, so the live route goes in
-# after this. The route line and its ipv6_static_routes entry above are boot-time
-# records that need no restart. The command, not the service module: on FreeBSD
-# that module puts `arguments` before the script name (`service gif0 netif
-# restart`). A task, not a handler: flushing handlers here would also run the
-# service roles' pending restarts first, under a gif0 about to be destroyed, and
-# an end-of-play handler would run after the live route below.
+# is not running it, each by name. A bare `service netif restart` would also
+# destroy and re-create every other listed clone, an operator's epair0 under a
+# running jail for one, and bounce the management interface. Restarting gif0
+# destroys and re-creates it, which drops every route through it, so the live
+# route goes in after this. The route line and its ipv6_static_routes entry above
+# are boot-time records that need no restart. The command, not the service
+# module: on FreeBSD that module puts `arguments` before the script name
+# (`service gif0 netif restart`). A task, not a handler: flushing handlers here
+# would also run the service roles' pending restarts first, under a gif0 about
+# to be destroyed, and an end-of-play handler would run after the live route.
 - name: Restart changed interfaces (FreeBSD)
   ansible.builtin.command:
     argv: [service, netif, restart, "{{ item }}"]
@@ -134,12 +131,38 @@
           + ([networking_data_iface]
              if (networking_rc_base is changed or networking_rc_iface is changed
                  or networking_rc_gre is changed or networking_rc_clone is changed
-                 or (networking_gif0_probe.rc | default(0)) != 0)
+                 or not (networking_gif0_probe.matches | default(true)))
              else [])
           + (['lo0'] if (networking_rc_vip4 is changed or networking_rc_vip6 is changed) else []))
          | unique }}
 
-# After the restarts: a restart that failed or never ran keeps the old record.
+# `service netif restart gif0` exits 0 even when an ifconfig it runs fails
+# (network.subr ifconfig_up ignores its status), so a tunnel that did not apply
+# stops the run here, before the record below would mark it applied.
+- name: Check gif0 after the restart (GRE, FreeBSD)
+  gif_status:
+    name: gif0
+    tunnel: "{{ networking_gre_tunnel }}"
+    inet6: "{{ gre_inner_ipv6 }}"
+  register: networking_gif0_after
+  when: ingress_mode == 'gre' and not ansible_check_mode
+
+- name: Require gif0 to run its configuration (GRE, FreeBSD)
+  ansible.builtin.assert:
+    that: networking_gif0_after.matches
+    fail_msg: >-
+      gif0 does not run the tunnel and inner address rc.conf gives it after
+      `service netif restart gif0`, which exits 0 even when the ifconfig it runs
+      fails (a tunnel address pair another gif interface holds, for one). Check
+      gre_outer_proto and its endpoints, gre_inner_ipv6. Wanted: tunnel {{ networking_gre_tunnel | join(' --> ') }}, inet6
+      {{ gre_inner_ipv6 }}. Running: tunnel
+      {{ (networking_gif0_after.tunnel | join(' --> ')) or 'none' }}, inet6
+      {{ (networking_gif0_after.inet6 | join(', ')) or 'none' }}.
+    quiet: true
+  when: ingress_mode == 'gre' and not ansible_check_mode
+
+# After the restarts and the check: a restart that failed or never ran, or a
+# tunnel that did not apply, keeps the old record.
 - name: Record the applied interface state (FreeBSD)
   ansible.builtin.copy:
     dest: "{{ networking_netif_state_file }}"
@@ -163,3 +186,22 @@
   register: networking_mc_route_result
   changed_when: networking_mc_route_result.rc == 0
   failed_when: networking_mc_route_result.rc != 0 and 'File exists' not in networking_mc_route_result.stderr
+
+# A route for the prefix can already exist through another interface (ingress_iface
+# or ingress_mode changed while the old interface stays up): move it here.
+- name: Look up the existing multicast route (FreeBSD)
+  ansible.builtin.command:
+    argv: [route, -n, get, -inet6, -net, "{{ networking_mc_route_prefix }}"]
+  register: networking_mc_route_get
+  changed_when: false
+  failed_when: false
+  when: (networking_mc_route_result.rc | default(0)) != 0
+
+- name: Move the multicast route to the ingress interface (FreeBSD)
+  ansible.builtin.command:
+    argv: [route, change, -inet6, -net, "{{ networking_mc_route_prefix }}", -interface, "{{ networking_ingress_iface }}"]
+  changed_when: true
+  when: >-
+    (networking_mc_route_result.rc | default(0)) != 0
+    and networking_mc_route_get.stdout is not search('^\s*interface: ' ~ (networking_ingress_iface | regex_escape) ~ '\s*$',
+                                                     multiline=True)
