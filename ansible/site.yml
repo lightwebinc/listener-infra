@@ -16,7 +16,7 @@
       ansible.builtin.assert:
         that:
           - mc_scope != 'link'
-          - (mc_route_prefix | default('') | trim | lower) is not match('^ff02:[0-9a-f:]*/0*16$')
+          - (mc_route_prefix | default('') | trim | lower) is not match('^ff02:[0-9a-f:.]*/0*16$')
         fail_msg: >-
           mc_scope link, or an mc_route_prefix equal to ff02::/16, cannot be used on
           FreeBSD: it reserves ff02::/16 (rc.d/routing installs "ff02::/16 ::1 -reject"
