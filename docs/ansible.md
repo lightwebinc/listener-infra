@@ -108,7 +108,7 @@ Every variable in `group_vars/all.yml`, with its default.
 | `sender_include` | `""` | IPv6 CIDRs of trusted announcement senders; empty = all |
 | `sender_exclude` | `""` | IPv6 CIDRs to reject before include check |
 | `shard_bits` | `2` | Must match proxy |
-| `mc_scope` | `site` | link \| site \| org \| global |
+| `mc_scope` | `site` | link \| site \| org \| global (link: no route on FreeBSD, which reserves ff02::/16; sending relies on `IPV6_MULTICAST_IF`, and the run warns) |
 | `mc_group_id` | `0x000B` | IANA group-id (default 0x000B = IANA Bitcoin) |
 | `listener_mode` | `collapsed` | Or `receiver` / `delivery` |
 | `delivery_addrs` | `""` | receiver mode: comma-separated delivery host:port fan-out (empty = egress_addr) |
@@ -117,6 +117,7 @@ Every variable in `group_vars/all.yml`, with its default.
 | `ssm_bootstrap_manifest` | `""` | SSM: CSV of shard-manifest sources for the manifest group join |
 | `ssm_bootstrap_subtree_announce` | `""` | SSM: CSV of subtree-announce emitter sources |
 | `ssm_bootstrap_refresh` | `30s` | SSM: DNS re-resolve interval for bootstrap entries |
+| `ssm_publishers_static` | `""` | SSM: CSV of publisher (proxy) sources joined for the data-plane and block-broadcast groups (SSM_PUBLISHERS_STATIC; rendered only when set) |
 | `shard_include` | `""` | Comma-separated shard indices, e.g. "0,1" (empty = join ALL groups) |
 | `subtree_include` | `""` | Comma-separated hex subtree IDs to allow (V2 only) |
 | `subtree_exclude` | `""` | Comma-separated hex subtree IDs to drop (V2 only) |
@@ -192,6 +193,33 @@ Every variable in `group_vars/all.yml`, with its default.
 | `ingress_set_prefix` | `bsp:tx:` | **Must match proxy's `txid_dedup_prefix`** |
 | `ingress_set_ttl` | `10m` |  |
 | `ingress_set_local_cap` | `1048576` |  |
+
+### Optional binary flags
+
+Each renders only when set: `""`, null or `false` passes nothing (a number,
+`0` included, renders), so the binary default applies and an older binary keeps
+working.
+
+| Variable | Default | Notes |
+|---|---|---|
+| `beef_max_object_bytes` | `""` | BEEF_MAX_OBJECT_BYTES: per-object bound for BEEF reassembly, at least the largest object any ingress admits (binary default 1048576) |
+| `bridging_window` | `""` | BRIDGING_WINDOW: reserved for the live-resharding bridging mode; parsed, unused |
+| `control_group_compat` | `""` | CONTROL_GROUP_COMPAT: asm-only \| both (binary default) \| derived; BRC-129 control-group prefix during the FF0x to FF3x move |
+| `lane_beef` | `""` | LANE_BEEF: TCP host:port for BRC-149 BEEF delivery records |
+| `lane_block` | `""` | LANE_BLOCK: TCP host:port for BRC-144 block objects |
+| `lane_header` | `""` | LANE_HEADER: TCP host:port for bare 80-byte block headers (BRC-135 payload) |
+| `lane_subtree` | `""` | LANE_SUBTREE: TCP host:port for BRC-143 subtree objects |
+| `lane_tx` | `""` | LANE_TX: TCP host:port for transaction payloads. Any `lane_*` replaces `egress_addr` for every class: a class left without a lane is withheld (`bsl_lane_drops_total{reason="no_lane"}`). Lanes are not valid with `listener_mode: receiver` (the listener refuses to start) |
+| `live_resharding` | `false` | LIVE_RESHARDING: opt-in BRC-139 live-resharding mode; validated, not acted on |
+| `local_source` | `""` | LOCAL_SOURCE: co-located proxy's `bind_source`, excluded from every (S,G) join |
+| `manifest_beacon_port` | `""` | MANIFEST_BEACON_PORT: UDP port for BRC-139 manifests (binary default 9001) |
+| `manifest_bootstrap` | `""` | MANIFEST_BOOTSTRAP: optional (binary default) \| required; validated, the listener waits for quorum in neither |
+| `nack_max_pending` | `""` | NACK_MAX_PENDING: cap on gaps pending across all flows (binary default 1048576; 0 = unbounded) |
+| `pilot_hysteresis` | `""` | PILOT_HYSTERESIS: wait before adopting a manifest (binary default 0 = twice its announce interval) |
+| `pilot_quorum` | `""` | PILOT_QUORUM: distinct authoritative announcers required to adopt a manifest (binary default 2) |
+| `reassembly_max_age` | `""` | REASSEMBLY_MAX_AGE: cap on holding a reassembly slot past its TTL while repair runs (binary default 2m) |
+| `reassembly_ttl` | `""` | REASSEMBLY_TTL: wait before an incomplete reassembly slot asks for its missing fragments (binary default 10s) |
+| `rebucket_relay` | `false` | REBUCKET_RELAY: this listener re-buckets on purpose (silences `bsl_rebucket_unguarded`) |
 
 ### Firewall perimeter (multicast-fabric isolation)
 

@@ -25,7 +25,8 @@ tail -f /var/log/shard_listener.log
 
 `/etc/rc.conf` also carries `ipv6_route_bsl_mcast` (multicast route on the
 ingress interface, listed in `ipv6_static_routes` so a boot installs it) and
-the `ifconfig_lo0_alias*` BGP VIPs.
+the `ifconfig_lo0_alias*` BGP VIPs, which a converge adds and removes on `lo0`
+live (`lo0` is never restarted).
 
 ## Diagnostics
 

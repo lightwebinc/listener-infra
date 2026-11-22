@@ -59,7 +59,7 @@ all:
     #       ingress_iface: gre6-bsl
     #       gre_local_ip6: "2001:db8:3::10"
     #       gre_remote_ip6: "2001:db8:3::1"
-    #       gre_inner_ipv6: "fd00::10/64"
+    #       gre_inner_ipv6: "2001:db8:4::10/64"
 
     # For local lab / CI testing, use the Docker harness in the
     # multicast-test repo. For Kubernetes, see multicast-kube-infra.
@@ -79,4 +79,4 @@ all:
     #         - "2001:db8::/48"
     #       bgp_ibgp_peers:
     #         - { peer_ip: "10.0.1.50", description: "listener-01" }
-    #         - { peer_ip6: "fd00::50", description: "listener-02" }
+    #         - { peer_ip6: "2001:db8:100::50", description: "listener-02" }
