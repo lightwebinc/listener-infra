@@ -209,7 +209,7 @@ working.
 | `lane_block` | `""` | LANE_BLOCK: TCP host:port for BRC-144 block objects |
 | `lane_header` | `""` | LANE_HEADER: TCP host:port for bare 80-byte block headers (BRC-135 payload) |
 | `lane_subtree` | `""` | LANE_SUBTREE: TCP host:port for BRC-143 subtree objects |
-| `lane_tx` | `""` | LANE_TX: TCP host:port for transaction payloads; any `lane_*` replaces `egress_addr` |
+| `lane_tx` | `""` | LANE_TX: TCP host:port for transaction payloads. Any `lane_*` replaces `egress_addr` for every class: a class left without a lane is withheld (`bsl_lane_drops_total{reason="no_lane"}`). Lanes are not valid with `listener_mode: receiver` (the listener refuses to start) |
 | `live_resharding` | `false` | LIVE_RESHARDING: opt-in BRC-139 live-resharding mode; validated, not acted on |
 | `local_source` | `""` | LOCAL_SOURCE: co-located proxy's `bind_source`, excluded from every (S,G) join |
 | `manifest_beacon_port` | `""` | MANIFEST_BEACON_PORT: UDP port for BRC-139 manifests (binary default 9001) |
