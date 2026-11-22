@@ -108,7 +108,7 @@ Every variable in `group_vars/all.yml`, with its default.
 | `sender_include` | `""` | IPv6 CIDRs of trusted announcement senders; empty = all |
 | `sender_exclude` | `""` | IPv6 CIDRs to reject before include check |
 | `shard_bits` | `2` | Must match proxy |
-| `mc_scope` | `site` | link \| site \| org \| global (link: refused on FreeBSD, which reserves ff02::/16) |
+| `mc_scope` | `site` | link \| site \| org \| global (link: no route on FreeBSD, which reserves ff02::/16; sending relies on `IPV6_MULTICAST_IF`, and the run warns) |
 | `mc_group_id` | `0x000B` | IANA group-id (default 0x000B = IANA Bitcoin) |
 | `listener_mode` | `collapsed` | Or `receiver` / `delivery` |
 | `delivery_addrs` | `""` | receiver mode: comma-separated delivery host:port fan-out (empty = egress_addr) |

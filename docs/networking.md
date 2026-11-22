@@ -81,10 +81,17 @@ Variables:
 Override `mc_route_prefix` when using an assigned narrower prefix (in
 conjunction with `mc_group_id`).
 
-`link` is refused on FreeBSD hosts: FreeBSD reserves `ff02::/16` (at boot
-`rc.d/routing` installs `ff02::/16 ::1 -reject`), so a link-scope multicast
-route can never be installed there, and `site.yml` fails before any role
-changes the host. The same applies to an `mc_route_prefix` of `ff02::/16` in any spelling.
+On FreeBSD hosts `link` installs no multicast route: FreeBSD reserves
+`ff02::/16` (at boot `rc.d/routing` installs `ff02::/16 ::1 -reject`), so a
+route for it can never be installed. The shard-listener needs none: it joins
+its groups on the ingress interface by index, and its multicast egress sets
+`IPV6_MULTICAST_IF` (on `mc_egress_iface`, by default the ingress interface),
+so FreeBSD picks that interface without a route lookup (`ip6_output()`,
+`in6_src.c` `selectroute()`), and a single-segment link-scope fabric works.
+The role skips the route, removes a route line an earlier converge wrote for
+another scope, and prints a warning; a sender that does not set
+`IPV6_MULTICAST_IF` hits the reject route. The same applies to an
+`mc_route_prefix` of `ff02::/16` in any spelling.
 
 ## BGP VIP
 

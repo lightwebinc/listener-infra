@@ -45,7 +45,7 @@ announce_scope: "site"          # Multicast scope(s) for the control group join
 sender_include: ""              # IPv6 CIDRs of trusted announcement senders; empty = all
 sender_exclude: ""              # IPv6 CIDRs to reject before include check
 shard_bits: 2
-mc_scope: "site"                # link | site | org | global (link: refused on FreeBSD, which reserves ff02::/16)
+mc_scope: "site"                # link | site | org | global (link: no route on FreeBSD, which reserves ff02::/16; sending relies on IPV6_MULTICAST_IF)
 mc_group_id: "0x000B"                # IANA group-id (default 0x000B = IANA Bitcoin)
 
 # Listener role split + multicast addressing model

@@ -73,16 +73,20 @@
     path: /etc/rc.conf
     regexp: '^ipv6_route_bsl_mcast='
     line: 'ipv6_route_bsl_mcast="{{ networking_mc_route_prefix }} -interface {{ networking_ingress_iface }}"'
+    # Link scope installs no route (see "Warn about link-scope multicast" below),
+    # so a line an earlier converge wrote for another scope goes.
+    state: "{{ 'absent' if networking_mc_route_link | bool else 'present' }}"
 
 # rc.d/routing installs only the routes named in ipv6_static_routes, so the
 # ipv6_route_bsl_mcast line alone does nothing at boot. value_present appends
-# the name, keeps the names already listed and never adds it twice.
+# the name, keeps the names already listed and never adds it twice; in link
+# scope value_absent takes it out again.
 - name: List the multicast route in ipv6_static_routes (FreeBSD)
   community.general.sysrc:
     path: /etc/rc.conf
     name: ipv6_static_routes
     value: bsl_mcast
-    state: value_present
+    state: "{{ 'value_absent' if networking_mc_route_link | bool else 'value_present' }}"
 
 # Compared on every run, not only after a change: gif0 can be missing, down, or
 # run another tunnel or inner address, with nothing left to change (destroyed,
@@ -171,6 +175,23 @@
     group: wheel
     mode: "0644"
 
+# Link scope works on FreeBSD without a route: shard-listener joins its groups
+# by interface index and sends its multicast egress with IPV6_MULTICAST_IF set,
+# and FreeBSD then picks the interface without a route lookup
+# (sys/netinet6/in6_mcast.c, ip6_output.c, in6_src.c selectroute()). The route
+# cannot be installed anyway (rc.d/routing's ff02::/16 reject route), so none
+# is, and the run says so instead of failing.
+- name: Warn about link-scope multicast (FreeBSD)
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: link-scope multicast on FreeBSD: no ff02::/16 route is installed,
+      because rc.d/routing reserves ff02::/16 with a reject route at every boot.
+      shard-listener needs none: it joins its groups on {{ networking_ingress_iface }}
+      by index and sends its multicast egress with IPV6_MULTICAST_IF set, so a
+      single-segment link-scope fabric works; a sender that does not set it hits
+      the reject route.
+  when: mc_scope == 'link' or networking_mc_route_link | bool
+
 # After the restart, which creates gif0 in GRE mode and, when gif0 existed,
 # destroyed it first and dropped every route through it.
 - name: Apply multicast route immediately (FreeBSD)
@@ -185,6 +206,7 @@
       - "{{ networking_ingress_iface }}"
   register: networking_mc_route_result
   changed_when: networking_mc_route_result.rc == 0
+  when: not (networking_mc_route_link | bool)
   # route(8) reports an existing route on stderr ("message indicates error: File
   # exists" over netlink, "writing to routing socket: File exists" over rtsock)
   # and on stdout ("... route already in table"); any other error stays fatal.
@@ -201,13 +223,16 @@
   register: networking_mc_route_get
   changed_when: false
   failed_when: false
-  when: (networking_mc_route_result.rc | default(0)) != 0
+  when:
+    - not (networking_mc_route_link | bool)
+    - (networking_mc_route_result.rc | default(0)) != 0
 
 - name: Move the multicast route to the ingress interface (FreeBSD)
   ansible.builtin.command:
     argv: [route, change, -inet6, -net, "{{ networking_mc_route_prefix }}", -interface, "{{ networking_ingress_iface }}"]
   changed_when: true
   when: >-
-    (networking_mc_route_result.rc | default(0)) != 0
+    not (networking_mc_route_link | bool)
+    and (networking_mc_route_result.rc | default(0)) != 0
     and networking_mc_route_get.stdout is not search('^\s*interface: ' ~ (networking_ingress_iface | regex_escape) ~ '\s*$',
                                                      multiline=True)
