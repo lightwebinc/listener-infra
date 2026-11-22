@@ -32,7 +32,7 @@ hosts = [
     ssh_key     = "~/.ssh/id_ed25519"
     egress_addr = "10.0.1.100:9100"
     # gre_local_ip6  = "2001:db8:a::10"   # local IPv6 endpoint for ip6gre
-    # gre_inner_ipv6 = "fd00::10/64"       # inner address on tunnel interface
+    # gre_inner_ipv6 = "2001:db8:2::10/64" # inner address on tunnel interface
     # bgp_peer_ip    = "198.51.100.1"     # per-host IPv4 BGP peer override
     # bgp_peer_ip6   = "2001:db8:b::1"   # per-host IPv6 BGP peer override
   },

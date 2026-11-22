@@ -1,4 +1,6 @@
 ---
+# Every task that changes interface configuration registers its result: netif is
+# restarted only when one of them changed (see "Restart networking" below).
 - name: Enable IPv6 in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
     path: /etc/rc.conf
@@ -6,6 +8,7 @@
     line: "{{ item.line }}"
   loop:
     - { regexp: '^ipv6_enable=', line: 'ipv6_enable="YES"' }
+  register: networking_rc_base
 
 - name: Configure ingress interface in rc.conf (ethernet, FreeBSD)
   # Fabric is IPv6-only; IPv4 DHCP is retained on the ingress iface only when
@@ -22,6 +25,7 @@
       line: >-
         ifconfig_{{ networking_ingress_iface }}_ipv6="inet6 accept_rtadv"
   when: ingress_mode == 'ethernet'
+  register: networking_rc_iface
 
 - name: Configure GRE (gif) tunnel in rc.conf (FreeBSD)
   # gif(4) supports both IPv4 and IPv6 outer transport; inner is always IPv6.
@@ -32,10 +36,23 @@
       {% set tun = (gre_outer_proto == 'ipv4')
                    | ternary(gre_local_ip4 ~ ' ' ~ gre_remote_ip4,
                              gre_local_ip6 ~ ' ' ~ gre_remote_ip6) -%}
-      cloned_interfaces="gif0"
       ifconfig_gif0="tunnel {{ tun }}"
       ifconfig_gif0_ipv6="inet6 {{ gre_inner_ipv6 }}"
   when: ingress_mode == 'gre'
+  register: networking_rc_gre
+
+# Appended, never assigned: a cloned_interfaces line of its own would replace the
+# list an operator keeps (lagg0, vlan0, ...), and those interfaces would no longer
+# be created at boot. After the block above, so a cloned_interfaces line an older
+# version of this role wrote inside the block is already gone.
+- name: List gif0 in cloned_interfaces (FreeBSD)
+  community.general.sysrc:
+    path: /etc/rc.conf
+    name: cloned_interfaces
+    value: gif0
+    state: value_present
+  when: ingress_mode == 'gre'
+  register: networking_rc_clone
 
 - name: Configure IPv4 BGP loopback VIP in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
@@ -43,6 +60,7 @@
     regexp: '^ifconfig_lo0_alias0='
     line: 'ifconfig_lo0_alias0="inet {{ bgp_vip }} netmask 255.255.255.255"'
   when: enable_bgp | bool and bgp_vip | length > 0
+  register: networking_rc_vip4
 
 - name: Configure IPv6 BGP loopback VIP in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
@@ -50,6 +68,7 @@
     regexp: '^ifconfig_lo0_alias1='
     line: 'ifconfig_lo0_alias1="inet6 {{ bgp_vip6 }} prefixlen 128"'
   when: enable_bgp | bool and bgp_vip6 | length > 0
+  register: networking_rc_vip6
 
 - name: Add persistent multicast route for ingress interface in rc.conf (FreeBSD)
   ansible.builtin.lineinfile:
@@ -67,14 +86,23 @@
     value: bsl_mcast
     state: value_present
 
-# The restart creates gif0 in GRE mode, and destroys it first when it exists,
-# which drops every route through it. The live route therefore goes in after
-# the restart.
+# Only when interface configuration changed. A restart destroys gif0 (GRE mode)
+# under the listener that is already bound to it, and re-creates it; the route
+# line and its ipv6_static_routes entry above are boot-time records that need no
+# restart. A task, not a handler: flushing handlers here would also run the
+# service roles' pending restarts first, under a gif0 about to be destroyed, and
+# an end-of-play handler would run after the live route below, flushing it.
 - name: Restart networking (FreeBSD)
   ansible.builtin.service:
     name: netif
     state: restarted
+  when: >-
+    networking_rc_base is changed or networking_rc_iface is changed
+    or networking_rc_gre is changed or networking_rc_clone is changed
+    or networking_rc_vip4 is changed or networking_rc_vip6 is changed
 
+# After the restart, which creates gif0 in GRE mode and, when gif0 existed,
+# destroyed it first and dropped every route through it.
 - name: Apply multicast route immediately (FreeBSD)
   ansible.builtin.command:
     argv:

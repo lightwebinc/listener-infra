@@ -4,6 +4,25 @@
   become: true
   gather_facts: true
 
+  # Settings a host can never satisfy fail here, before any role changes it.
+  pre_tasks:
+    # The same derivation as networking_mc_route_prefix (roles/networking/vars).
+    # FreeBSD reserves ff02::/16: rc.d/routing installs "ff02::/16 ::1 -reject"
+    # at every boot, so a link-scope multicast route can never be installed.
+    - name: Refuse a link-scope multicast route on FreeBSD
+      ansible.builtin.assert:
+        that:
+          - (mc_route_prefix | default('') | trim | lower) != 'ff02::/16'
+          - (mc_route_prefix | default('') | trim | length > 0) or mc_scope != 'link'
+        fail_msg: >-
+          The multicast route resolves to ff02::/16 (mc_scope link, or mc_route_prefix),
+          which FreeBSD reserves: rc.d/routing installs "ff02::/16 ::1 -reject" at every
+          boot, so this route can never be installed. Use mc_scope site (the default),
+          org or global on FreeBSD hosts.
+        quiet: true
+      when: ansible_os_family == 'FreeBSD'
+      tags: [always]
+
   roles:
     - role: common
       tags: [common]
