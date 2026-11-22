@@ -49,6 +49,7 @@ inet6:
 
 import ipaddress
 import re
+import socket
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -65,11 +66,22 @@ def address(text):
 
 
 def endpoint(text):
-    """A tunnel endpoint keeps its zone: fe80::1%em0 and fe80::1%em1 are different links."""
+    """A tunnel endpoint keeps its zone: fe80::1%em0 and fe80::1%em1 are different links.
+
+    A numeric zone is the interface index; ifconfig prints the interface name, so
+    the index is turned into that name before the comparison.
+    """
+    host, sep, zone = text.partition("%")
+    if sep and zone.isdigit():
+        try:
+            zone = socket.if_indextoname(int(zone))
+        except (OSError, ValueError):
+            pass
+        text = "%s%%%s" % (host, zone)
     try:
         return ipaddress.ip_address(text)
     except ValueError:
-        if "%" not in text:
+        if not sep:
             raise
         return address(text)  # Python before 3.9 has no scoped IPv6Address
 
