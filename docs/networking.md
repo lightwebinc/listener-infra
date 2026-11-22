@@ -51,7 +51,9 @@ Deploys:
 - `/etc/netplan/61-shard-listener-gre.yaml`: tunnel definition +
   multicast route on the tunnel.
 - When using this mode, set `ingress_iface: gre6-bsl` on each host so the
-  listener joins groups on the tunnel interface.
+  listener joins groups on the tunnel interface. On FreeBSD the role always
+  names the tunnel `gif0` and does not read `gre_iface`, so set
+  `ingress_iface: gif0` there.
 
 Variables:
 
@@ -95,8 +97,10 @@ On FreeBSD the role edits `/etc/rc.conf` directly:
 - `ifconfig_<iface>` / `ifconfig_<iface>_ipv6` for ethernet
 - `cloned_interfaces="gif0"` + `ifconfig_gif0*` for GRE mode
 - `ifconfig_lo0_alias0` / `alias1` for BGP VIPs
-- `ipv6_route_bsl_mcast` for the multicast route
-- Restart via `service netif restart`
+- `ipv6_route_bsl_mcast` for the multicast route, with `bsl_mcast` added to
+  `ipv6_static_routes` (names already listed stay) so a boot installs it
+- Restart via `service netif restart`, which creates `gif0` in GRE mode; the
+  live multicast route is added after the restart
 
 ## Verifying multicast receive
 

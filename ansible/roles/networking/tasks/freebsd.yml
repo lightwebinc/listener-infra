@@ -57,6 +57,24 @@
     regexp: '^ipv6_route_bsl_mcast='
     line: 'ipv6_route_bsl_mcast="{{ networking_mc_route_prefix }} -interface {{ networking_ingress_iface }}"'
 
+# rc.d/routing installs only the routes named in ipv6_static_routes, so the
+# ipv6_route_bsl_mcast line alone does nothing at boot. value_present appends
+# the name, keeps the names already listed and never adds it twice.
+- name: List the multicast route in ipv6_static_routes (FreeBSD)
+  community.general.sysrc:
+    path: /etc/rc.conf
+    name: ipv6_static_routes
+    value: bsl_mcast
+    state: value_present
+
+# The restart creates gif0 in GRE mode, and destroys it first when it exists,
+# which drops every route through it. The live route therefore goes in after
+# the restart.
+- name: Restart networking (FreeBSD)
+  ansible.builtin.service:
+    name: netif
+    state: restarted
+
 - name: Apply multicast route immediately (FreeBSD)
   ansible.builtin.command:
     argv:
@@ -70,8 +88,3 @@
   register: networking_mc_route_result
   changed_when: networking_mc_route_result.rc == 0
   failed_when: networking_mc_route_result.rc != 0 and 'File exists' not in networking_mc_route_result.stderr
-
-- name: Restart networking (FreeBSD)
-  ansible.builtin.service:
-    name: netif
-    state: restarted

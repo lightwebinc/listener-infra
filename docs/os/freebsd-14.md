@@ -24,7 +24,8 @@ tail -f /var/log/shard_listener.log
 | `/usr/local/bin/bsl-bgp-check.sh` | BGP health check, run from cron every minute |
 
 `/etc/rc.conf` also carries `ipv6_route_bsl_mcast` (multicast route on the
-ingress interface) and the `ifconfig_lo0_alias*` BGP VIPs.
+ingress interface, listed in `ipv6_static_routes` so a boot installs it) and
+the `ifconfig_lo0_alias*` BGP VIPs.
 
 ## Diagnostics
 
